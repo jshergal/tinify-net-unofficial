@@ -13,11 +13,11 @@
 		<PackageId>Tinify.Unofficial</PackageId>
 		<PackageTags>tinify;tinypng;tinyjpg;compress;images;api</PackageTags>
 		<PackageIcon>tinifyicon.unofficial.png</PackageIcon>
-		<PackageProjectUrl>https://github.com/tinify/tinify-net</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/jshergal/tinify-net-unofficial</PackageProjectUrl>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../CHANGES.md"))</PackageReleaseNotes>
 		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>https://github.com/tinify/tinify-net.git</RepositoryUrl>
+		<RepositoryUrl>https://github.com/jshergal/tinify-net-unofficial</RepositoryUrl>
 		<LangVersion>9.0</LangVersion>
 		<EnableNETAnalyzers>True</EnableNETAnalyzers>
 		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
