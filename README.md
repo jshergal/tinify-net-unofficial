@@ -1,6 +1,8 @@
-[![CI_CD](https://github.com/jshergal/tinify-net-unoffcial/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tinify/tinify-net/actions/workflows/ci-cd.yml)  
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jshergal/tinify-net-unofficial/CI_CD)
+![GitHub last commit](https://img.shields.io/github/last-commit/jshergal/tinify-net-unofficial)
+![Nuget](https://img.shields.io/nuget/v/tinify.unofficial)
 
-# Unofficial fork of the Tinify API Client for .NET
+## Unofficial fork of the Tinify API Client for .NET
 
 [Official Tinify GitHub repo](https://github.com/tinify/tinify-net)
 
