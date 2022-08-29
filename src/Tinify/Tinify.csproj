@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<PropertyGroup>
+		<Description>.NET client for the Tinify API. Tinify compresses your images intelligently. Read more at https://tinify.com.</Description>
+		<AssemblyTitle>Tinify.Unofficial</AssemblyTitle>
+		<VersionPrefix>1.0.1</VersionPrefix>
+		<Authors>Tinify;Jeff Shergalis</Authors>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<AssemblyName>Tinify.Unofficial</AssemblyName>
+		<AssemblyTitle>Tinify.Unofficial</AssemblyTitle>
+		<Product>Tinify-Unofficial</Product>
+		<Copyright>Copyright © 2017-2022</Copyright>
+		<PackageId>Tinify.Unofficial</PackageId>
+		<PackageTags>tinify;tinypng;tinyjpg;compress;images;api</PackageTags>
+		<PackageIcon>tinifyicon.unofficial.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/tinify/tinify-net</PackageProjectUrl>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../CHANGES.md"))</PackageReleaseNotes>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/tinify/tinify-net.git</RepositoryUrl>
+		<LangVersion>9.0</LangVersion>
+		<EnableNETAnalyzers>True</EnableNETAnalyzers>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<AnalysisLevel>latest-recommended</AnalysisLevel>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+			<_Parameter1>Tinify.Tests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove=".DS_Store" />
+		<None Include="images/tinifyicon.unofficial.png" Pack="true" PackagePath="\" />
+		<None Include="../../LICENSE" Pack="true" Visible="false" PackagePath="" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="data\cacert.pem" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="6.0.5" />
+	</ItemGroup>
+
+</Project>
