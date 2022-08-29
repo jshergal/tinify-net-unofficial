@@ -59,7 +59,7 @@ jobs:
 
     - name: Build
       run: |
-        dotnet build --configuration Release --version-suffix "prerelease.$GITHUB_RUN_ID" --no-restore
+        dotnet build --configuration Release --version-suffix "prerelease.${{github.run_number}}" --no-restore
 
     - name: Run tests on mac and linux
       if: ${{ !startsWith(matrix.os, 'windows') }}
@@ -102,7 +102,7 @@ jobs:
       - name: Create pre-release NuGet package
         if: github.event_name != 'release'
         run: |
-          dotnet pack src/Tinify/Tinify.csproj --version-suffix "prerelease.$GITHUB_RUN_ID" -v normal -c Release --include-symbols --include-source  -o .
+          dotnet pack src/Tinify/Tinify.csproj --version-suffix "prerelease.${{github.run_number}}" -v normal -c Release --include-symbols --include-source  -o .
           
       - name: Push to Nuget
         run: |
