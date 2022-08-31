@@ -1,68 +1,41 @@
 using System;
-using System.Collections.Generic;
 using System.Net.Http.Headers;
 
 namespace TinifyAPI
 {
     public class ResultMeta
     {
-        protected HttpResponseHeaders Meta { get; }
-
         internal ResultMeta(HttpResponseHeaders meta)
         {
-            Meta = meta;
+            Width = GetWidth(meta);
+            Height = GetHeight(meta);
+            Location = meta.Location;
         }
 
-        public uint? Width
-        {
-            get
-            {
-                uint value;
-                IEnumerable<string> values;
-                if (!Meta.TryGetValues("Image-Width", out values))
-                {
-                    return null;
-                }
+        public uint? Width { get; }
+        public uint? Height { get; }
+        public Uri Location { get; }
 
-                foreach (var header in values)
-                {
-                    if (uint.TryParse(header, out value))
-                    {
-                        return value;
-                    }
-                }
-                return null;
-            }
+        private static uint? GetWidth(HttpResponseHeaders meta)
+        {
+            if (!meta.TryGetValues("Image-Width", out var values)) return null;
+
+            foreach (var header in values)
+                if (uint.TryParse(header, out var value))
+                    return value;
+
+            return null;
         }
 
-        public uint? Height
+        private static uint? GetHeight(HttpResponseHeaders meta)
         {
-            get
-            {
-                uint value;
-                IEnumerable<string> values;
-                if (!Meta.TryGetValues("Image-Height", out values))
-                {
-                    return null;
-                }
+            if (!meta.TryGetValues("Image-Height", out var values)) return null;
 
-                foreach (var header in values)
-                {
-                    if (uint.TryParse(header, out value))
-                    {
-                        return value;
-                    }
-                }
-                return null;
-            }
-        }
+            foreach (var header in values)
+                if (uint.TryParse(header, out var value))
+                    return value;
 
-        public Uri Location
-        {
-            get
-            {
-                return Meta.Location;
-            }
+            return null;
         }
     }
 }

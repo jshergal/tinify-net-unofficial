@@ -1,39 +1,29 @@
 using System.Net.Http.Headers;
 using System.IO;
 using System.Threading.Tasks;
+using System;
 
 namespace TinifyAPI
 {
-    public class Result : ResultMeta
+    public sealed class Result : ResultMeta
     {
-        protected HttpContentHeaders Content { get; set; }
-        protected byte[] Data { get; set; }
+        private readonly HttpContentHeaders _content;
+        private readonly byte[] _data;
 
         internal Result(HttpResponseHeaders meta, HttpContentHeaders content, byte[] data) : base(meta)
         {
-            Content = content;
-            Data = data;
+            _content = content;
+            _data = data;
         }
 
-        public async Task ToFile(string path)
-        {
-            using var file = File.Create(path);
-            await file.WriteAsync(Data, 0, Data.Length).ConfigureAwait(false);
-        }
+        public async Task ToFile(string path) => await File.WriteAllBytesAsync(path, _data);
 
-        public byte[] ToBuffer() => Data;
+        public async Task ToStream(Stream destination) => await destination.WriteAsync(_data);
 
-        public ulong? Size => (ulong?) Content.ContentLength;
+        public byte[] ToBuffer() => _data;
 
-        public string MediaType
-        {
-            get
-            {
-                var header = Content.ContentType;
-                return header?.MediaType;
-            }
-        }
+        public ulong? Size => (ulong?) _content.ContentLength;
 
-        public string ContentType => MediaType;
+        public string ContentType => _content.ContentType?.MediaType;
     }
 }
