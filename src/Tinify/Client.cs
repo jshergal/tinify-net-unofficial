@@ -35,7 +35,7 @@ namespace TinifyAPI
         {
             var handler = new HttpClientHandler()
             {
-                ServerCertificateCustomValidationCallback = Internal.SSL.ValidationCallback
+                ServerCertificateCustomValidationCallback = Internal.Ssl.ValidationCallback
             };
 
             if (proxy != null)
