@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Tinify/Tinify.csproj" />
+    <ProjectReference Include="..\..\src\Tinify.Unofficial\Tinify.Unofficial.csproj" />
   </ItemGroup>
 
   <ItemGroup>
