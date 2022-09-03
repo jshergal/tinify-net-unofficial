@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     public sealed class Result : ResultMeta
     {

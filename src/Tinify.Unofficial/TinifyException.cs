@@ -1,4 +1,4 @@
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     public class TinifyException : System.Exception {
         internal static TinifyException Create(string message, string type, uint status) {

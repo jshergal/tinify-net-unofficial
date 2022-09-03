@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Threading.Tasks;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     public static class SourceTaskExtensions
     {

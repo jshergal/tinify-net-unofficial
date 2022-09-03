@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 /* We cannot and should not give a namespace and class the same name:
    https://msdn.microsoft.com/en-us/library/ms229026(v=vs.110).aspx */
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     using Method = HttpMethod;
 

@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     public static class ResultTaskExtensions
     {

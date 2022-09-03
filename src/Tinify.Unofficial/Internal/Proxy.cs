@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace TinifyAPI.Internal
+namespace Tinify.Unofficial.Internal
 {
     internal class Proxy : IWebProxy
     {

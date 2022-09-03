@@ -1,7 +1,7 @@
 using System;
 using System.Net.Http.Headers;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     public class ResultMeta
     {

@@ -3,11 +3,12 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Runtime.InteropServices;
 
-namespace TinifyAPI.Internal
+namespace Tinify.Unofficial.Internal
 {
     internal static class Platform
     {
         public static readonly string UserAgent = $"{GetClientVersion()} {GetFrameworkVersion()}".Trim();
+        
         private static string GetOSPlatform()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "Windows";

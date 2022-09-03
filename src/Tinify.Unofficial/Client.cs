@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -8,7 +9,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     using Method = HttpMethod;
 
@@ -27,40 +28,30 @@ namespace TinifyAPI
         public static readonly short RetryCount = 1;
         public static ushort RetryDelay { get; internal set; }= 500;
 
-        public static readonly string UserAgent = Internal.Platform.UserAgent;
-
         private readonly HttpClient _client;
 
-        public Client(string key, string appIdentifier = null, string proxy = null)
+        /// <summary>
+        /// Creates a new Client object for accessing the Tinify API
+        /// </summary>
+        /// <param name="key">Your Tinify API key</param>
+        /// <param name="handler">The message handler responsible for processing HTTP messages.
+        /// Can be used to provide a proxy, to add special SSL handling, etc.</param>
+        /// <param name="disposeHandler">true if the inner handler should be disposed of by
+        /// Client.Dispose; false if you intend to reuse the handler.</param>
+        public Client(string key, HttpMessageHandler handler = null, bool disposeHandler = false)
         {
-            var handler = new HttpClientHandler()
-            {
-                ServerCertificateCustomValidationCallback = Internal.Ssl.ValidationCallback
-            };
-
-            if (proxy != null)
-            {
-                handler.Proxy = new Internal.Proxy(proxy);
-                handler.UseProxy = true;
-            }
-
-            _client = new HttpClient(handler)
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentNullException(nameof(key), "You must provide a Tinify API key.");
+            _client = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler)
             {
                 BaseAddress = ApiEndpoint,
                 Timeout = Timeout.InfiniteTimeSpan,
             };
 
+            _client.DefaultRequestHeaders.Add("User-Agent", Internal.Platform.UserAgent);
 
-            var userAgent = UserAgent;
-            if (appIdentifier != null)
-            {
-                userAgent += " " + appIdentifier;
-            }
-
-            _client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-
-            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes("api:" + key));
-            _client.DefaultRequestHeaders.Add("Authorization", "Basic " + credentials);
+            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}"));
+            _client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
         }
 
         public Task<HttpResponseMessage> Request(Method method, string url)

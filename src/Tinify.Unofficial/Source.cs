@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace TinifyAPI
+namespace Tinify.Unofficial
 {
     using Method = HttpMethod;
 
