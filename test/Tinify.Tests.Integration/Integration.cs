@@ -11,10 +11,11 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Tinify.Unofficial;
 using MetadataDirectory = MetadataExtractor.Directory;
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests.Integration
+namespace Tinify.Unofficial.Tests.Integration
 {
     internal sealed class TempFile : IDisposable
     {
@@ -126,6 +127,8 @@ namespace TinifyAPI.Tests.Integration
 
         private const string VoormediaCopyright = "Copyright Voormedia";
 
+        private static TinifyClient _client;
+
         [OneTimeSetUp]
         public static void Init()
         {
@@ -134,8 +137,10 @@ namespace TinifyAPI.Tests.Integration
             Tinify.Key = Environment.GetEnvironmentVariable("TINIFY_KEY");
             Tinify.Proxy = Environment.GetEnvironmentVariable("TINIFY_PROXY");
 
+            _client = new TinifyClient(Tinify.Key);
+
             var unoptimizedPath = Path.Combine(AppContext.BaseDirectory, "examples", "voormedia.png");
-            optimized = Tinify.FromFile(unoptimizedPath);
+            optimized = _client.ShrinkFromFile(unoptimizedPath);
         }
 
         [Test]
@@ -161,67 +166,61 @@ namespace TinifyAPI.Tests.Integration
         [Test]
         public void Should_Compress_FromUrl()
         {
-            using (var file = new TempFile())
-            {
-                var source = Tinify.FromUrl(
-                    "https://raw.githubusercontent.com/tinify/tinify-python/master/test/examples/voormedia.png"
-                );
+            using var file = new TempFile();
+            var source = _client.ShrinkFromUrl(
+                "https://raw.githubusercontent.com/tinify/tinify-python/master/test/examples/voormedia.png"
+            );
 
-                source.ToFile(file.Path).Wait();
+            source.ToFile(file.Path).Wait();
 
-                var size = new FileInfo(file.Path).Length;
-                Assert.Greater(size, 1000);
-                Assert.Less(size, 1500);
+            var size = new FileInfo(file.Path).Length;
+            Assert.Greater(size, 1000);
+            Assert.Less(size, 1500);
 
-                var metaData = new ImageMetadata(file.Path);
-                Assert.That(metaData.IsPng);
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsPng);
 
-                /* width == 137 */
-                Assert.AreEqual(137, metaData.GetImageWidth());
-                Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
-            }
+            /* width == 137 */
+            Assert.AreEqual(137, metaData.GetImageWidth());
+            Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
         }
 
         [Test]
         public void Should_Resize()
         {
-            using (var file = new TempFile())
-            {
-                var options = new { method = "fit", width = 50, height = 20 };
-                optimized.Resize(options).ToFile(file.Path).Wait();
+            using var file = new TempFile();
+            var options = new { method = "fit", width = 50, height = 20 };
+            optimized.Resize(options).ToFile(file.Path).Wait();
 
-                var size = new FileInfo(file.Path).Length;
-                Assert.Greater(size, 500);
-                Assert.Less(size, 1000);
+            var size = new FileInfo(file.Path).Length;
+            Assert.Greater(size, 500);
+            Assert.Less(size, 1000);
 
-                var metaData = new ImageMetadata(file.Path);
-                Assert.That(metaData.IsPng);
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsPng);
 
-                /* width == 50 */
-                Assert.AreEqual(50, metaData.GetImageWidth());
-                Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
-            }
+            /* width == 50 */
+            Assert.AreEqual(50, metaData.GetImageWidth());
+            Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
         }
 
         [Test]
         public void Should_PreserveMetadata()
         {
-            using (var file = new TempFile())
-            {
-                var options = new[] {"copyright", "location"};
-                optimized.Preserve(options).ToFile(file.Path).Wait();
+            using var file = new TempFile();
+            var options = new[] {"copyright", "location"};
+            optimized.Preserve(options).ToFile(file.Path).Wait();
 
-                var size = new FileInfo(file.Path).Length;
-                Assert.Greater(size, 1000);
-                Assert.Less(size, 2000);
+            var size = new FileInfo(file.Path).Length;
+            Assert.Greater(size, 1000);
+            Assert.Less(size, 2000);
 
-                var metaData = new ImageMetadata(file.Path);
-                Assert.That(metaData.IsPng);
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsPng);
 
-                /* width == 137 */
-                Assert.AreEqual(137, metaData.GetImageWidth());
-                Assert.IsTrue(metaData.ContainsStringInXmpData(VoormediaCopyright));
-            }
+            /* width == 137 */
+            Assert.AreEqual(137, metaData.GetImageWidth());
+            Assert.IsTrue(metaData.ContainsStringInXmpData(VoormediaCopyright));
         }
 
         [Test]

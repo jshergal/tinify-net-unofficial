@@ -2,9 +2,11 @@
 
 using System;
 using System.Net.Http;
+using Tinify.Unofficial;
+
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     [TestFixture]
     public class ResultMeta_With_Meta

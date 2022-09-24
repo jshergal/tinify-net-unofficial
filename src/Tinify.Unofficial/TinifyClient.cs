@@ -13,7 +13,7 @@ namespace Tinify.Unofficial
 {
     using Method = HttpMethod;
 
-    public sealed class Client : IDisposable
+    public sealed class TinifyClient : IDisposable
     {
         internal sealed class ErrorData
         {
@@ -23,7 +23,9 @@ namespace Tinify.Unofficial
             public string Error { get; init; }
         }
 
-        public static readonly Uri ApiEndpoint = new("https://api.tinify.com");
+        private static readonly Uri ShrinkUri = new("/shrink", UriKind.Relative);
+        
+        private static readonly Uri ApiEndpoint = new("https://api.tinify.com");
 
         public static readonly short RetryCount = 1;
         public static ushort RetryDelay { get; internal set; }= 500;
@@ -38,20 +40,42 @@ namespace Tinify.Unofficial
         /// Can be used to provide a proxy, to add special SSL handling, etc.</param>
         /// <param name="disposeHandler">true if the inner handler should be disposed of by
         /// Client.Dispose; false if you intend to reuse the handler.</param>
-        public Client(string key, HttpMessageHandler handler = null, bool disposeHandler = false)
+        public TinifyClient(string key, HttpMessageHandler handler = null, bool disposeHandler = false)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key), "You must provide a Tinify API key.");
-            _client = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler)
-            {
-                BaseAddress = ApiEndpoint,
-                Timeout = Timeout.InfiniteTimeSpan,
-            };
+            _client = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler);
+            _client.BaseAddress = ApiEndpoint;
+            _client.Timeout = Timeout.InfiniteTimeSpan;
 
             _client.DefaultRequestHeaders.Add("User-Agent", Internal.Platform.UserAgent);
 
             var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}"));
             _client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
+        }
+
+        public async Task<Source> ShrinkFromFile(string path)
+        {
+            var buffer = await System.IO.File.ReadAllBytesAsync(path).ConfigureAwait(false);
+            return await ShrinkFromBuffer(buffer).ConfigureAwait(false);
+        }
+
+        public async Task<Source> ShrinkFromBuffer(byte[] buffer)
+        {
+            var response = await Request(Method.Post, ShrinkUri, buffer).ConfigureAwait(false);
+            var location = response.Headers.Location;
+
+            return new Source(location, this);
+        }
+
+        public async Task<Source> ShrinkFromUrl(string url)
+        {
+            var body = new StringContent($"{{\"source\":{{\"url\":\"{url}\"}}}}",
+                Encoding.UTF8, "application/json");
+            var response = await Request(Method.Post, ShrinkUri, body);
+            var location = response.Headers.Location;
+
+            return new Source(location, this);
         }
 
         public Task<HttpResponseMessage> Request(Method method, string url)
@@ -153,12 +177,29 @@ namespace Tinify.Unofficial
                         Error = "ParseError"
                     };
                 }
-                throw TinifyException.Create(data.Message, data.Error, (uint)response.StatusCode);
+                throw TinifyException.Create(data.Message, data.Error, response.StatusCode);
             }
 
             return null;
         }
-
+        
+        public async Task<bool> Validate()
+        {
+            try
+            {
+                await Request(Method.Post, "/shrink").ConfigureAwait(false);
+            }
+            catch (AccountException err) when (err.Status == HttpStatusCode.TooManyRequests)
+            {
+                return true;
+            }
+            catch (ClientException)
+            {
+                return true;
+            }
+            return false;
+        }
+        
         public void Dispose()
         {
             _client?.Dispose();

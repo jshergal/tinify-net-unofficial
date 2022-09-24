@@ -6,21 +6,25 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using RichardSzalay.MockHttp;
+using Tinify.Unofficial;
+using Tinify.Unofficial.Internal;
+
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     [TestFixture]
     public class Client_Request_WhenValid
     {
-        public Client Subject { get; set; }
+        public TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.EnqueueShrink(Subject);
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            Helper.EnqueueShrink();
         }
 
         [TearDown]
@@ -92,7 +96,7 @@ namespace TinifyAPI.Tests
         {
             Subject.Request(HttpMethod.Post, "/shrink").Wait();
             Assert.AreEqual(
-                Internal.Platform.UserAgent,
+                Platform.UserAgent,
                 string.Join(" ", Helper.LastRequest.Headers.GetValues("User-Agent"))
             );
         }
@@ -101,82 +105,23 @@ namespace TinifyAPI.Tests
         public void Should_UpdateCompressionCount()
         {
             Subject.Request(HttpMethod.Post, "/shrink").Wait();
-            Assert.AreEqual(12, Tinify.CompressionCount);
-        }
-    }
-
-    [TestFixture]
-    public class Client_Request_WhenValid_WithAppId
-    {
-        public Client Subject { get; set; }
-        private const string key = "key";
-
-        [SetUp]
-        public void SetUp()
-        {
-            Subject = new Client(key, "TestApp/0.1");
-            Helper.EnqueueShrink(Subject);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            Helper.MockHandler.VerifyNoOutstandingExpectation();
-        }
-
-        [Test]
-        public void Should_IssueRequest_WithUserAgent()
-        {
-            Subject.Request(HttpMethod.Post, "/shrink").Wait();
-            Assert.AreEqual(
-                Internal.Platform.UserAgent + " TestApp/0.1",
-                string.Join(" ", Helper.LastRequest.Headers.GetValues("User-Agent"))
-            );
-        }
-    }
-
-    [TestFixture]
-    public class Client_Request_WhenValid_WithProxy
-    {
-        public Client Subject { get; set; }
-        private const string key = "key";
-
-        [SetUp]
-        public void SetUp()
-        {
-            Subject = new Client(key, null, "http://user:pass@localhost:8080");
-            Helper.EnqueueShrink(Subject);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            Helper.MockHandler.VerifyNoOutstandingExpectation();
-        }
-
-        [Test]
-        [Ignore("test proxy")]
-        public void Should_IssueRequest_WithProxyAuthorization()
-        {
-            Subject.Request(HttpMethod.Post, "/shrink").Wait();
-            Assert.AreEqual(
-                "Basic dXNlcjpwYXNz",
-                string.Join(" ", Helper.LastRequest.Headers.GetValues("Proxy-Authorization"))
-            );
+            Assert.AreEqual(12, Unofficial.Tinify.CompressionCount);
         }
     }
 
     [TestFixture]
     public class Client_Request_WithTimeout_Once
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new TaskCanceledException();
@@ -198,14 +143,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithTimeout_Repeatedly
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new TaskCanceledException();
@@ -235,14 +182,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithSocketError_Once
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new HttpRequestException("An error occurred while sending the request");
@@ -264,14 +213,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithSocketError_Repeatedly
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new HttpRequestException("An error occurred while sending the request");
@@ -301,14 +252,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithUnexpectedError_Once
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new System.Exception("some error");
@@ -330,14 +283,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithUnexpectedError_Repeatedly
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 throw new System.Exception("some error");
@@ -367,14 +322,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithServerError_Once
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 584,
                 new StringContent("{\"error\":\"InternalServerError\",\"message\":\"Oops!\"}")
@@ -396,14 +353,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithServerError_Repeatedly
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 584,
                 new StringContent("{\"error\":\"InternalServerError\",\"message\":\"Oops!\"}")
@@ -433,14 +392,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithBadServerResponse_Once
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 543,
                 new StringContent("<!-- this is not json -->")
@@ -462,14 +423,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithBadServerResponse_Repeatedly
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 543,
                 new StringContent("<!-- this is not json -->")
@@ -500,14 +463,16 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithClientError
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
+            
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 492,
                 new StringContent("{\"error\":\"BadRequest\",\"message\":\"Oops!\"}")
@@ -532,14 +497,15 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Client_Request_WithBadCredentials
     {
-        public Client Subject { get; set; }
+        private TinifyClient Subject { get; set; }
         private const string key = "key";
 
         [SetUp]
         public void SetUp()
         {
-            Subject = new Client(key);
-            Helper.MockClient(Subject);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            Subject = new TinifyClient(key, Helper.MockHandler);
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.Unauthorized,
                 new StringContent("{\"error\":\"Unauthorized\",\"message\":\"Oops!\"}")

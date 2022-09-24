@@ -6,181 +6,153 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using RichardSzalay.MockHttp;
+using Tinify.Unofficial;
+
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
-    public abstract class Reset
-    {
-        [TearDown]
-        public void TearDown()
-        {
-            Tinify.Key = null;
-            Tinify.Proxy = null;
-        }
-    }
-
     [TestFixture]
-    public class Tinify_Key : Reset
+    public class Tinify_Key
     {
+        [SetUp]
+        public void SetUp()
+        {
+            Helper.ResetMockHandler();
+        }
+        
         [Test]
         public void Should_ResetClient_WithNewKey()
         {
-            Tinify.Key = "abcde";
-            var _ = Tinify.Client;
-            Tinify.Key = "fghij";
+            const string key = "fghij";
+            using var client = new TinifyClient(key, Helper.MockHandler);
 
-            Helper.EnqueueShrink(Tinify.Client);
-            Tinify.Client.Request(HttpMethod.Get, "/shrink").Wait();
+            Helper.EnqueueShrink();
+            client.Request(HttpMethod.Get, "/shrink").Wait();
 
             Assert.AreEqual(
-                "Basic " + Convert.ToBase64String(Encoding.ASCII.GetBytes("api:fghij")),
-                Helper.LastRequest.Headers.Authorization.ToString()
+                "Basic " + Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}")),
+                Helper.LastRequest.Headers?.Authorization?.ToString()
             );
         }
     }
 
     [TestFixture]
-    public class Tinify_AppIdentifier : Reset
-    {
-        [Test]
-        public void Should_ResetClient_WithNewAppIdentifier()
-        {
-            Tinify.Key = "abcde";
-            Tinify.AppIdentifier = "MyApp/1.0";
-            var _ = Tinify.Client;
-            Tinify.AppIdentifier = "MyApp/2.0";
-
-            Helper.EnqueueShrink(Tinify.Client);
-            Tinify.Client.Request(HttpMethod.Get, "/shrink").Wait();
-
-            Assert.AreEqual(
-                Client.UserAgent + " MyApp/2.0",
-                Helper.LastRequest.Headers.UserAgent.ToString()
-            );
-        }
-    }
-
-    [TestFixture]
-    public class Tinify_Proxy : Reset
-    {
-        [Test]
-        [Ignore("test proxy")]
-        public void Should_ResetClient_WithNewProxy()
-        {
-            Tinify.Key = "abcde";
-            Tinify.Proxy = "http://localhost";
-            var _ = Tinify.Client;
-            Tinify.Proxy = "http://user:pass@localhost:8080";
-
-            Helper.EnqueueShrink(Tinify.Client);
-            Tinify.Client.Request(HttpMethod.Get, "/shrink").Wait();
-
-            Assert.AreEqual(
-                "Basic dXNlcjpwYXNz",
-                string.Join(" ", Helper.LastRequest.Headers.GetValues("Proxy-Authorization"))
-            );
-        }
-    }
-
-    [TestFixture]
-    public class Tinify_Client : Reset
+    public class Tinify_Client
     {
         [Test]
         public void WithKey_Should_ReturnClient()
         {
-            Tinify.Key = "abcde";
-            Assert.IsInstanceOf<Client>(Tinify.Client);
+            using var client = new TinifyClient("abcde");
+            Assert.IsInstanceOf<TinifyClient>(client);
         }
 
         [Test]
-        public void WithoutKey_Should_ThrowException()
+        public void WithNullKey_Should_ThrowException()
         {
-            var error = Assert.Throws<AccountException>(() =>
+            Assert.Throws<ArgumentNullException>(() =>
             {
-                var _ = Tinify.Client;
+                var _ = new TinifyClient(null);
             });
-
-            Assert.AreEqual(
-                "Provide an API key with Tinify.Key = ...",
-                error?.Message
-            );
         }
-
+        
         [Test]
-        public void WithInvalidProxy_Should_ThrowException()
+        public void WithEmptyKey_Should_ThrowException()
         {
-            Tinify.Key = "abcde";
-            Tinify.Proxy = "http-bad-url";
-            var error = Assert.Throws<ConnectionException>(() =>
+            Assert.Throws<ArgumentNullException>(() =>
             {
-                var _ = Tinify.Client;
+                var _ = new TinifyClient(string.Empty);
             });
-
-            Assert.AreEqual(
-                "Invalid proxy: cannot parse 'http-bad-url'",
-                error?.Message
-            );
+        }
+        
+        [Test]
+        public void WithWhiteSpaceKey_Should_ThrowException()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+            {
+                var _ = new TinifyClient("    \t    ");
+            });
         }
     }
 
     [TestFixture]
-    public class Tinify_Validate : Reset
+    public class Tinify_Validate
     {
+        private MockHttpMessageHandler _messageHandler;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            _messageHandler = new MockHttpMessageHandler();
+            TinifyClient.RetryDelay = 10;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            _messageHandler.ResetExpectations();
+            _messageHandler.ResetBackendDefinitions();
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown() => _messageHandler?.Dispose();
+
         [Test]
         public void WithValidKey_Should_ReturnTrue()
         {
-            Tinify.Key = "valid";
-
-            Helper.MockClient(Tinify.Client);
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
+            const string key = "valid";
+            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.BadRequest,
                 new StringContent("{\"error\":\"Input missing\",\"message\":\"No input\"}")
             );
+            
+            using var client = new TinifyClient(key, _messageHandler);
 
-            Assert.AreEqual(true, Tinify.Validate().Result);
+
+            Assert.AreEqual(true, client.Validate().Result);
         }
 
         [Test]
         public void WithLimitedKey_Should_ReturnTrue()
         {
-            Tinify.Key = "valid";
-
-            Helper.MockClient(Tinify.Client);
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
-                (HttpStatusCode) 429,
+            const string key = "valid";
+            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
+                HttpStatusCode.TooManyRequests,
                 new StringContent("{\"error\":\"Too may requests\",\"message\":\"Your monthly limit has been exceeded\"}")
             );
+            using var client = new TinifyClient(key, _messageHandler);
 
-            Assert.AreEqual(true, Tinify.Validate().Result);
+
+            Assert.AreEqual(true, client.Validate().Result);
         }
 
         [Test]
         public void WithError_Should_ThrowException()
         {
-            Tinify.Key = "valid";
-
-            Helper.MockClient(Tinify.Client);
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
+            const string key = "valid";
+            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.Unauthorized,
                 new StringContent("{\"error\":\"Unauthorized\",\"message\":\"Credentials are invalid\"}")
             );
+            using var client = new TinifyClient(key, _messageHandler);
 
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await Tinify.Validate();
+                await client.Validate();
             });
         }
     }
 
     [TestFixture]
-    public class Tinify_FromBuffer : Reset
+    public class Tinify_ShrinkFromSource
     {
+        private TinifyClient _client;
+        
         [SetUp]
         public void SetUp()
         {
-            Tinify.Key = "valid";
-            Helper.MockClient(Tinify.Client);
+            _client = new TinifyClient("valid");
+            Helper.MockClient(_client);
 
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
@@ -190,62 +162,32 @@ namespace TinifyAPI.Tests
             });
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            _client?.Dispose();
+        }
+
         [Test]
-        public void Should_ReturnSourceTask()
+        public void FromBuffer_Should_ReturnSourceTask()
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
-            Assert.IsInstanceOf<Task<Source>>(Source.FromBuffer(buffer));
+            Assert.IsInstanceOf<Task<Source>>(_client.ShrinkFromBuffer(buffer));
         }
-    }
-
-    [TestFixture]
-    public class Tinify_FromFile : Reset
-    {
-        [SetUp]
-        public void SetUp()
-        {
-            Tinify.Key = "valid";
-            Helper.MockClient(Tinify.Client);
-
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
-            {
-                var res = new HttpResponseMessage(HttpStatusCode.Created);
-                res.Headers.Add("Location", "https://api.tinify.com/some/location");
-                return res;
-            });
-        }
-
+        
         [Test]
-        public void Should_ReturnSourceTask()
+        public void FromFile_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                Tinify.FromFile(AppContext.BaseDirectory + "/examples/dummy.png")
+                _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png")
             );
         }
-    }
-
-    [TestFixture]
-    public class Tinify_FromUrl : Reset
-    {
-        [SetUp]
-        public void SetUp()
-        {
-            Tinify.Key = "valid";
-            Helper.MockClient(Tinify.Client);
-
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
-            {
-                var res = new HttpResponseMessage(HttpStatusCode.Created);
-                res.Headers.Add("Location", "https://api.tinify.com/some/location");
-                return res;
-            });
-        }
-
+        
         [Test]
-        public void Should_ReturnSourceTask()
+        public void FromUrl_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                Source.FromUrl("http://example.com/test.jpg")
+                _client.ShrinkFromUrl("http://example.com/test.jpg")
             );
         }
     }

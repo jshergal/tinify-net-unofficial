@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text;
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     [TestFixture]
     public class Result_With_MetaAndData

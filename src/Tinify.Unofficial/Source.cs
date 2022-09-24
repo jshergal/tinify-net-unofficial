@@ -10,53 +10,31 @@ namespace Tinify.Unofficial
 
     public sealed class Source
     {
-        public static async Task<Source> FromFile(string path)
-        {
-            var buffer = await Task.Run(() => File.ReadAllBytes(path)).ConfigureAwait(false);
-            return await FromBuffer(buffer).ConfigureAwait(false);
-        }
-
-        public static async Task<Source> FromBuffer(byte[] buffer)
-        {
-            var response = await Tinify.Client.Request(Method.Post, "/shrink", buffer).ConfigureAwait(false);
-            var location = response.Headers.Location;
-
-            return new Source(location);
-        }
-
-        public static async Task<Source> FromUrl(string url)
-        {
-            var body = new Dictionary<string, object> {{"source", new { url = url }}};
-
-            var response = await Tinify.Client.Request(Method.Post, "/shrink", body).ConfigureAwait(false);
-            var location = response.Headers.Location;
-
-            return new Source(location);
-        }
-
         private readonly Uri _url;
         private readonly Dictionary<string, object> _commands;
+        private readonly TinifyClient _client;
 
-        internal Source(Uri url, Dictionary<string, object> commands = null)
+        internal Source(Uri url, TinifyClient client, Dictionary<string, object> commands = null)
         {
             _url = url;
+            _client = client;
             commands ??= new Dictionary<string, object>();
             _commands = commands;
         }
 
         public Source Preserve(params string[] options)
         {
-            return new Source(_url, MergeCommands("preserve", options));
+            return new Source(_url, _client, MergeCommands("preserve", options));
         }
 
         public Source Resize(object options)
         {
-            return new Source(_url, MergeCommands("resize", options));
+            return new Source(_url, _client, MergeCommands("resize", options));
         }
 
         public async Task<ResultMeta> Store(object options)
         {
-            var response = await Tinify.Client.Request(Method.Post, _url,
+            var response = await _client.Request(Method.Post, _url,
                 MergeCommands("store", options)).ConfigureAwait(false);
 
             return new ResultMeta(response.Headers);
@@ -66,9 +44,9 @@ namespace Tinify.Unofficial
         {
             HttpResponseMessage response;
             if (_commands.Count == 0) {
-                response = await Tinify.Client.Request(Method.Get, _url).ConfigureAwait(false);
+                response = await _client.Request(Method.Get, _url).ConfigureAwait(false);
             } else {
-                response = await Tinify.Client.Request(Method.Post, _url, _commands).ConfigureAwait(false);
+                response = await _client.Request(Method.Post, _url, _commands).ConfigureAwait(false);
             }
 
             var body = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);

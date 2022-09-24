@@ -1,71 +1,66 @@
+using System.Globalization;
+using System.Net;
+
 namespace Tinify.Unofficial
 {
     public class TinifyException : System.Exception {
-        internal static TinifyException Create(string message, string type, uint status) {
-            if (status == 401 || status == 429)
+        internal static TinifyException Create(string message, string type, HttpStatusCode status)
+        {
+            return (int)status switch
             {
-                return new AccountException(message, type, status);
-            }
-            else if (status >= 400 && status <= 499)
-            {
-                return new ClientException(message, type, status);
-            }
-            else if (status >= 500 && status <= 599)
-            {
-                return new ServerException(message, type, status);
-            }
-            else
-            {
-                return new TinifyException(message, type, status);
-            }
+                401 or 429 => new AccountException(message, type, status),
+                >= 400 and <= 499 => new ClientException(message, type, status),
+                >= 500 and <= 599 => new ServerException(message, type, status),
+                _ => new TinifyException(message, type, status)
+            };
         }
 
-        public uint Status { get; }
+        public HttpStatusCode Status { get; }
 
         internal TinifyException() : base() {}
 
         internal TinifyException(string message, System.Exception err = null) : base(message, err) { }
 
-        internal TinifyException(string message, string type, uint status) :
-            base(message + " (HTTP " + status + "/" + type + ")")
+        internal TinifyException(string message, string type, HttpStatusCode status) :
+            base($"{message} (HTTP {status:D}/{type})")
         {
             Status = status;
         }
     }
 
-    public class AccountException : TinifyException
+    public sealed class AccountException : TinifyException
     {
         internal AccountException() : base() {}
 
         internal AccountException(string message, System.Exception err = null) : base(message, err) { }
 
-        internal AccountException(string message, string type, uint status) : base(message, type, status) { }
+        internal AccountException(string message, string type, HttpStatusCode status) : base(message, type, status) { }
     }
 
-    public class ClientException : TinifyException
+    public sealed class ClientException : TinifyException
     {
         internal ClientException() : base() {}
 
         internal ClientException(string message, System.Exception err = null) : base(message, err) { }
 
-        internal ClientException(string message, string type, uint status) : base(message, type, status) { }
+        internal ClientException(string message, string type, HttpStatusCode status) : base(message, type, status) { }
     }
 
-    public class ServerException : TinifyException
+    public sealed class ServerException : TinifyException
     {
         internal ServerException() : base() {}
 
         internal ServerException(string message, System.Exception err = null) : base(message, err) { }
 
-        internal ServerException(string message, string type, uint status) : base(message, type, status) { }
+        internal ServerException(string message, string type, HttpStatusCode status) : base(message, type, status) { }
     }
 
-    public class ConnectionException : TinifyException
+    public sealed class ConnectionException : TinifyException
     {
         internal ConnectionException() : base() {}
 
         internal ConnectionException(string message, System.Exception err = null) : base(message, err) { }
 
-        internal ConnectionException(string message, string type, uint status) : base(message, type, status) { }
+        internal ConnectionException(string message, string type, HttpStatusCode status) : base(message, type, status) { }
     }
 }

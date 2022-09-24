@@ -8,9 +8,11 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using RichardSzalay.MockHttp;
+using Tinify.Unofficial;
+
 // ReSharper disable InconsistentNaming
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     internal sealed class TempFile : IDisposable
     {
@@ -50,11 +52,14 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Source_WithInvalidApiKey
     {
+        private TinifyClient _client;
+        
         [SetUp]
         public void SetUp()
         {
-            Tinify.Key = "invalid";
-            Helper.MockClient(Tinify.Client);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            _client = new TinifyClient("invalid", Helper.MockHandler);
 
             Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.Unauthorized,
@@ -62,12 +67,15 @@ namespace TinifyAPI.Tests
             );
         }
 
+        [TearDown]
+        public void TearDown() => _client?.Dispose();
+
         [Test]
         public void FromFile_Should_ThrowAccountException()
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await Source.FromFile(AppContext.BaseDirectory + "/examples/dummy.png");
+                await _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png");
             });
         }
 
@@ -77,7 +85,7 @@ namespace TinifyAPI.Tests
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await Source.FromBuffer(buffer);
+                await _client.ShrinkFromBuffer(buffer);
             });
         }
 
@@ -86,7 +94,7 @@ namespace TinifyAPI.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await Source.FromUrl("http://example.com/test.jpg");
+                await _client.ShrinkFromUrl("http://example.com/test.jpg");
             });
         }
     }
@@ -94,11 +102,14 @@ namespace TinifyAPI.Tests
     [TestFixture]
     public class Source_WithValidApiKey
     {
+        private TinifyClient _client;
+        
         [SetUp]
         public void SetUp()
         {
-            Tinify.Key = "valid";
-            Helper.MockClient(Tinify.Client);
+            TinifyClient.RetryDelay = 10;
+            Helper.ResetMockHandler();
+            _client = new TinifyClient("valid", Helper.MockHandler);
 
             Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(req =>
             {
@@ -112,12 +123,15 @@ namespace TinifyAPI.Tests
                 new StringContent("compressed file")
             );
         }
+        
+        [TearDown]
+        public void TearDown() => _client?.Dispose();
 
         [Test]
         public void FromFile_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                Source.FromFile(AppContext.BaseDirectory + "/examples/dummy.png")
+                _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png")
             );
         }
 
@@ -126,7 +140,7 @@ namespace TinifyAPI.Tests
         {
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("compressed file"),
-                Source.FromFile(AppContext.BaseDirectory + "/examples/dummy.png").ToBuffer().Result
+                _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png").ToBuffer().Result
             );
         }
 
@@ -134,7 +148,7 @@ namespace TinifyAPI.Tests
         public void FromBuffer_Should_ReturnSourceTask()
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
-            Assert.IsInstanceOf<Task<Source>>(Source.FromBuffer(buffer));
+            Assert.IsInstanceOf<Task<Source>>(_client.ShrinkFromBuffer(buffer));
         }
 
         [Test]
@@ -143,7 +157,7 @@ namespace TinifyAPI.Tests
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("compressed file"),
-                Source.FromBuffer(buffer).ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).ToBuffer().Result
             );
         }
 
@@ -151,7 +165,7 @@ namespace TinifyAPI.Tests
         public void FromUrl_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                Source.FromUrl("http://example.com/test.jpg")
+                _client.ShrinkFromUrl("http://example.com/test.jpg")
             );
         }
 
@@ -160,7 +174,7 @@ namespace TinifyAPI.Tests
         {
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("compressed file"),
-                Source.FromUrl("http://example.com/test.jpg").ToBuffer().Result
+                _client.ShrinkFromUrl("http://example.com/test.jpg").ToBuffer().Result
             );
         }
 
@@ -175,7 +189,7 @@ namespace TinifyAPI.Tests
 
             Assert.ThrowsAsync<ClientException>(async () =>
             {
-                await Source.FromUrl("file://wrong");
+                await _client.ShrinkFromUrl("file://wrong");
             });
         }
 
@@ -184,7 +198,7 @@ namespace TinifyAPI.Tests
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.IsInstanceOf<Task<Result>>(
-                Source.FromBuffer(buffer).GetResult()
+                _client.ShrinkFromBuffer(buffer).GetResult()
             );
         }
 
@@ -193,19 +207,19 @@ namespace TinifyAPI.Tests
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.IsInstanceOf<Task<Source>>(
-                Source.FromBuffer(buffer).Preserve("copyright", "location")
+                _client.ShrinkFromBuffer(buffer).Preserve("copyright", "location")
             );
         }
 
         [Test]
         public void Preserve_Should_ReturnSourceTask_WithData()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "copyrighted file");
+            Helper.EnqueueShrinkAndResult("copyrighted file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("copyrighted file"),
-                Source.FromBuffer(buffer).Preserve("copyright", "location").ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).Preserve("copyright", "location").ToBuffer().Result
             );
 
             Assert.AreEqual(
@@ -217,12 +231,12 @@ namespace TinifyAPI.Tests
         [Test]
         public void Preserve_Should_ReturnSourceTask_WithData_ForArray()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "copyrighted file");
+            Helper.EnqueueShrinkAndResult("copyrighted file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("copyrighted file"),
-                Source.FromBuffer(buffer).Preserve(new string[] {"copyright", "location"}).ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).Preserve(new string[] {"copyright", "location"}).ToBuffer().Result
             );
 
             Assert.AreEqual(
@@ -234,7 +248,7 @@ namespace TinifyAPI.Tests
         [Test]
         public void Preserve_Should_IncludeOtherOptions_IfSet()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "copyrighted resized file");
+            Helper.EnqueueShrinkAndResult("copyrighted resized file");
 
             var resizeOptions = new { width = 100, height = 60 };
             var preserveOptions = new[] {"copyright", "location"};
@@ -242,7 +256,7 @@ namespace TinifyAPI.Tests
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("copyrighted resized file"),
-                Source.FromBuffer(buffer).Resize(resizeOptions).Preserve(preserveOptions).ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).Resize(resizeOptions).Preserve(preserveOptions).ToBuffer().Result
             );
 
             Assert.AreEqual(
@@ -256,19 +270,19 @@ namespace TinifyAPI.Tests
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.IsInstanceOf<Task<Source>>(
-                Source.FromBuffer(buffer).Resize(new { width = 400 })
+                _client.ShrinkFromBuffer(buffer).Resize(new { width = 400 })
             );
         }
 
         [Test]
         public void Resize_Should_ReturnSourceTask_WithData()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "small file");
+            Helper.EnqueueShrinkAndResult("small file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("small file"),
-                Source.FromBuffer(buffer).Resize(new { width = 400 }).ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).Resize(new { width = 400 }).ToBuffer().Result
             );
 
             Assert.AreEqual(
@@ -282,19 +296,19 @@ namespace TinifyAPI.Tests
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.IsInstanceOf<Task<ResultMeta>>(
-                Source.FromBuffer(buffer).Store(new { service = "s3" })
+                _client.ShrinkFromBuffer(buffer).Store(new { service = "s3" })
             );
         }
 
         [Test]
         public void Store_Should_ReturnResultMetaTask_WithLocation()
         {
-            Helper.EnqueuShrinkAndStore(Tinify.Client);
+            Helper.EnqueuShrinkAndStore();
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 new Uri("https://bucket.s3.amazonaws.com/example"),
-                Source.FromBuffer(buffer).Store(new { service = "s3" }).Result.Location
+                _client.ShrinkFromBuffer(buffer).Store(new { service = "s3" }).Result.Location
             );
 
             Assert.AreEqual(
@@ -306,12 +320,12 @@ namespace TinifyAPI.Tests
         [Test]
         public void Store_Should_IncludeOtherOptions_IfSet()
         {
-            Helper.EnqueuShrinkAndStore(Tinify.Client);
+            Helper.EnqueuShrinkAndStore();
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 new Uri("https://bucket.s3.amazonaws.com/example"),
-                Source.FromBuffer(buffer).Resize(new { width = 400 }).Store(new { service = "s3" }).Result.Location
+                _client.ShrinkFromBuffer(buffer).Resize(new { width = 400 }).Store(new { service = "s3" }).Result.Location
             );
 
             Assert.AreEqual(
@@ -323,24 +337,24 @@ namespace TinifyAPI.Tests
         [Test]
         public void ToBuffer_Should_ReturnImageData()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "compressed file");
+            Helper.EnqueueShrinkAndResult("compressed file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
                 Encoding.ASCII.GetBytes("compressed file"),
-                Source.FromBuffer(buffer).ToBuffer().Result
+                _client.ShrinkFromBuffer(buffer).ToBuffer().Result
             );
         }
 
         [Test]
         public void ToFile_Should_StoreImageData()
         {
-            Helper.EnqueueShrinkAndResult(Tinify.Client, "compressed file");
+            Helper.EnqueueShrinkAndResult("compressed file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
             using (var file = new TempFile())
             {
-                Source.FromBuffer(buffer).ToFile(file.Path).Wait();
+                _client.ShrinkFromBuffer(buffer).ToFile(file.Path).Wait();
                 Assert.AreEqual(
                     Encoding.ASCII.GetBytes("compressed file"),
                     File.ReadAllBytes(file.Path)

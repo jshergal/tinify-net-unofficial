@@ -4,11 +4,11 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     internal static class Helper
     {
-        private static readonly FieldInfo HttpClientField = typeof(Client)
+        private static readonly FieldInfo HttpClientField = typeof(TinifyClient)
             .GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private static readonly FieldInfo HttpHandlerField = GetHttpHandlerField();
@@ -20,11 +20,17 @@ namespace TinifyAPI.Tests
             return handlerField ?? msgInvoker.GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
-        public static MockHttpMessageHandler MockHandler;
+        public static MockHttpMessageHandler MockHandler = new MockHttpMessageHandler();
         public static HttpRequestMessage LastRequest;
         public static string LastBody;
 
-        public static void MockClient(Client test)
+        public static void ResetMockHandler()
+        {
+            MockHandler.ResetBackendDefinitions();
+            MockHandler.ResetExpectations();
+        }
+
+        public static void MockClient(TinifyClient test)
         {
             MockHandler = new MockHttpMessageHandler();
 
@@ -32,12 +38,12 @@ namespace TinifyAPI.Tests
             var client = (HttpClient) HttpClientField.GetValue(test);
             HttpHandlerField.SetValue(client, MockHandler);
 
-            Client.RetryDelay = 10;
+            TinifyClient.RetryDelay = 10;
         }
 
-        public static void EnqueueShrink(Client test)
+        public static void EnqueueShrink()
         {
-            MockClient(test);
+            TinifyClient.RetryDelay = 10;
 
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
@@ -54,9 +60,9 @@ namespace TinifyAPI.Tests
             });
         }
 
-        public static void EnqueueShrinkAndResult(Client test, string body)
+        public static void EnqueueShrinkAndResult(string body)
         {
-            MockClient(test);
+            TinifyClient.RetryDelay = 10;
 
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(_ =>
             {
@@ -80,9 +86,9 @@ namespace TinifyAPI.Tests
             });
         }
 
-        public static void EnqueuShrinkAndStore(Client test)
+        public static void EnqueuShrinkAndStore()
         {
-            MockClient(test);
+            TinifyClient.RetryDelay = 10;
 
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(_ =>
             {
