@@ -118,7 +118,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -149,7 +148,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -188,7 +186,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -219,7 +216,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -258,7 +254,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -289,7 +284,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -328,7 +322,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -359,7 +352,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -398,7 +390,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -429,7 +420,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -469,7 +459,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             
@@ -503,7 +492,6 @@ namespace Tinify.Unofficial.Tests
         [SetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             Subject = new TinifyClient(key, Helper.MockHandler);
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(

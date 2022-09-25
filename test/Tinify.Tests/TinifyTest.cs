@@ -6,12 +6,21 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using RichardSzalay.MockHttp;
-using Tinify.Unofficial;
 
 // ReSharper disable InconsistentNaming
 
 namespace Tinify.Unofficial.Tests
 {
+    [SetUpFixture]
+    public class TinifyUnofficialTestsSetup
+    {
+        [OneTimeSetUp]
+        public void InitializationForAllTests()
+        {
+            TinifyClient.RetryDelay = 10;
+        }
+    }
+    
     [TestFixture]
     public class Tinify_Key
     {
@@ -32,7 +41,7 @@ namespace Tinify.Unofficial.Tests
 
             Assert.AreEqual(
                 "Basic " + Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}")),
-                Helper.LastRequest.Headers?.Authorization?.ToString()
+                Helper.LastRequest.Headers.Authorization?.ToString()
             );
         }
     }
@@ -78,35 +87,22 @@ namespace Tinify.Unofficial.Tests
     [TestFixture]
     public class Tinify_Validate
     {
-        private MockHttpMessageHandler _messageHandler;
-
-        [OneTimeSetUp]
-        public void OneTimeSetUp()
-        {
-            _messageHandler = new MockHttpMessageHandler();
-            TinifyClient.RetryDelay = 10;
-        }
-
         [SetUp]
         public void SetUp()
         {
-            _messageHandler.ResetExpectations();
-            _messageHandler.ResetBackendDefinitions();
+            Helper.ResetMockHandler();
         }
-
-        [OneTimeTearDown]
-        public void OneTimeTearDown() => _messageHandler?.Dispose();
 
         [Test]
         public void WithValidKey_Should_ReturnTrue()
         {
             const string key = "valid";
-            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
+            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.BadRequest,
                 new StringContent("{\"error\":\"Input missing\",\"message\":\"No input\"}")
             );
             
-            using var client = new TinifyClient(key, _messageHandler);
+            using var client = new TinifyClient(key, Helper.MockHandler);
 
 
             Assert.AreEqual(true, client.Validate().Result);
@@ -116,11 +112,11 @@ namespace Tinify.Unofficial.Tests
         public void WithLimitedKey_Should_ReturnTrue()
         {
             const string key = "valid";
-            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
+            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.TooManyRequests,
                 new StringContent("{\"error\":\"Too may requests\",\"message\":\"Your monthly limit has been exceeded\"}")
             );
-            using var client = new TinifyClient(key, _messageHandler);
+            using var client = new TinifyClient(key, Helper.MockHandler);
 
 
             Assert.AreEqual(true, client.Validate().Result);
@@ -130,11 +126,11 @@ namespace Tinify.Unofficial.Tests
         public void WithError_Should_ThrowException()
         {
             const string key = "valid";
-            _messageHandler.Expect("https://api.tinify.com/shrink").Respond(
+            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.Unauthorized,
                 new StringContent("{\"error\":\"Unauthorized\",\"message\":\"Credentials are invalid\"}")
             );
-            using var client = new TinifyClient(key, _messageHandler);
+            using var client = new TinifyClient(key, Helper.MockHandler);
 
             Assert.ThrowsAsync<AccountException>(async () =>
             {
@@ -148,13 +144,13 @@ namespace Tinify.Unofficial.Tests
     {
         private TinifyClient _client;
         
-        [SetUp]
+        [OneTimeSetUp]
         public void SetUp()
         {
-            _client = new TinifyClient("valid");
-            Helper.MockClient(_client);
+            Helper.ResetMockHandler();
+            _client = new TinifyClient("valid", Helper.MockHandler);
 
-            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
+            Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(_ =>
             {
                 var res = new HttpResponseMessage(HttpStatusCode.Created);
                 res.Headers.Add("Location", "https://api.tinify.com/some/location");
@@ -162,11 +158,8 @@ namespace Tinify.Unofficial.Tests
             });
         }
 
-        [TearDown]
-        public void TearDown()
-        {
-            _client?.Dispose();
-        }
+        [OneTimeTearDown]
+        public void TearDown() => _client?.Dispose();
 
         [Test]
         public void FromBuffer_Should_ReturnSourceTask()
@@ -187,7 +180,7 @@ namespace Tinify.Unofficial.Tests
         public void FromUrl_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                _client.ShrinkFromUrl("http://example.com/test.jpg")
+                _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg)
             );
         }
     }

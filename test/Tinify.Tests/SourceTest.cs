@@ -1,14 +1,12 @@
 ﻿using NUnit.Framework;
 
 using System;
-using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using RichardSzalay.MockHttp;
-using Tinify.Unofficial;
 
 // ReSharper disable InconsistentNaming
 
@@ -54,10 +52,9 @@ namespace Tinify.Unofficial.Tests
     {
         private TinifyClient _client;
         
-        [SetUp]
+        [OneTimeSetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             _client = new TinifyClient("invalid", Helper.MockHandler);
 
@@ -67,7 +64,7 @@ namespace Tinify.Unofficial.Tests
             );
         }
 
-        [TearDown]
+        [OneTimeTearDown]
         public void TearDown() => _client?.Dispose();
 
         [Test]
@@ -94,7 +91,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await _client.ShrinkFromUrl("http://example.com/test.jpg");
+                await _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg);
             });
         }
     }
@@ -102,16 +99,16 @@ namespace Tinify.Unofficial.Tests
     [TestFixture]
     public class Source_WithValidApiKey
     {
+        private const string ExpectedContent = "compressed file";
         private TinifyClient _client;
         
-        [SetUp]
+        [OneTimeSetUp]
         public void SetUp()
         {
-            TinifyClient.RetryDelay = 10;
             Helper.ResetMockHandler();
             _client = new TinifyClient("valid", Helper.MockHandler);
 
-            Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(req =>
+            Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(_ =>
             {
                 var res = new HttpResponseMessage(HttpStatusCode.Created);
                 res.Headers.Add("Location", "https://api.tinify.com/some/location");
@@ -120,11 +117,11 @@ namespace Tinify.Unofficial.Tests
 
             Helper.MockHandler.When("https://api.tinify.com/some/location").Respond(
                 HttpStatusCode.OK,
-                new StringContent("compressed file")
+                new StringContent(ExpectedContent)
             );
         }
         
-        [TearDown]
+        [OneTimeTearDown]
         public void TearDown() => _client?.Dispose();
 
         [Test]
@@ -139,7 +136,7 @@ namespace Tinify.Unofficial.Tests
         public void FromFile_Should_ReturnSourceTask_WithData()
         {
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("compressed file"),
+                Encoding.ASCII.GetBytes(ExpectedContent),
                 _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png").ToBuffer().Result
             );
         }
@@ -156,7 +153,7 @@ namespace Tinify.Unofficial.Tests
         {
             var buffer = Encoding.ASCII.GetBytes("png file");
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("compressed file"),
+                Encoding.ASCII.GetBytes(ExpectedContent),
                 _client.ShrinkFromBuffer(buffer).ToBuffer().Result
             );
         }
@@ -165,7 +162,7 @@ namespace Tinify.Unofficial.Tests
         public void FromUrl_Should_ReturnSourceTask()
         {
             Assert.IsInstanceOf<Task<Source>>(
-                _client.ShrinkFromUrl("http://example.com/test.jpg")
+                _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg)
             );
         }
 
@@ -173,8 +170,8 @@ namespace Tinify.Unofficial.Tests
         public void FromUrl_Should_ReturnSourceTask_WithData()
         {
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("compressed file"),
-                _client.ShrinkFromUrl("http://example.com/test.jpg").ToBuffer().Result
+                Encoding.ASCII.GetBytes(ExpectedContent),
+                _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg).ToBuffer().Result
             );
         }
 
@@ -352,14 +349,12 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueueShrinkAndResult("compressed file");
 
             var buffer = Encoding.ASCII.GetBytes("png file");
-            using (var file = new TempFile())
-            {
-                _client.ShrinkFromBuffer(buffer).ToFile(file.Path).Wait();
-                Assert.AreEqual(
-                    Encoding.ASCII.GetBytes("compressed file"),
-                    File.ReadAllBytes(file.Path)
-                );
-            }
+            using var file = new TempFile();
+            _client.ShrinkFromBuffer(buffer).ToFile(file.Path).Wait();
+            Assert.AreEqual(
+                Encoding.ASCII.GetBytes("compressed file"),
+                File.ReadAllBytes(file.Path)
+            );
         }
     }
 }
