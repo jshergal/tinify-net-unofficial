@@ -2,10 +2,10 @@
 
 	<PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
-		<AssemblyName>Tinify.Tests.Integration</AssemblyName>
-		<PackageId>Tinify.Tests.Integration</PackageId>
+		<PackageId>Tinify.Unofficial.Tests.Integration</PackageId>
 		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
 		<LangVersion>8.0</LangVersion>
+		<RootNamespace>Tinify.Tests.Integration</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
