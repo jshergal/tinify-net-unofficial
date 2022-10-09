@@ -1,16 +1,46 @@
+using System;
+using System.IO;
 using NUnit.Framework;
 using RichardSzalay.MockHttp;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 
 namespace Tinify.Unofficial.Tests
 {
+    internal sealed class TempFile : IDisposable
+    {
+        public string Path { get; private set; } = System.IO.Path.GetTempFileName();
+        
+        ~TempFile() => Dispose(false);
+
+        public void Dispose() => Dispose(true);
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing) GC.SuppressFinalize(this);
+            try
+            {
+                if (!string.IsNullOrEmpty(Path)) File.Delete(Path);
+            }
+            catch
+            {
+                // ignored
+            }
+
+            Path = null;
+        }
+    }
+    
     internal static class Helper
     {
         public const string HttpsExampleComTestJpg = "https://example.com/test.jpg";
+        public const string DefaultKey = "key";
+        
+        public static readonly byte[] MockPngImageBytes = Encoding.ASCII.GetBytes("png file");
 
-        public static readonly MockHttpMessageHandler MockHandler = new MockHttpMessageHandler();
+        public static readonly MockHttpMessageHandler MockHandler = new();
         public static HttpRequestMessage LastRequest;
         public static string LastBody;
 
@@ -85,6 +115,17 @@ namespace Tinify.Unofficial.Tests
             });
         }
 
+        // Helper method for getting a private field
+        // Taken from this SO answer: https://stackoverflow.com/a/46488844 posted by
+        // Bruno Zell https://stackoverflow.com/users/5185376/bruno-zell
+        public static T GetFieldValue<T>(this object obj, string name)
+        {
+            // Set the flags so that private and public fields from instances will be found
+            var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var field = obj.GetType().GetField(name, bindingFlags);
+            return (T) field?.GetValue(obj);
+        }
+            
         // Helper method added due to a behavior change in .Net 6.0 where instead of returning null,
         // HttpContent will be of type EmptyContentType
 #if NET5_0_OR_GREATER

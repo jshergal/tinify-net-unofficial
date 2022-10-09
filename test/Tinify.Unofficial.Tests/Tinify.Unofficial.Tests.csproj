@@ -5,6 +5,7 @@
     <PackageId>Tinify.Unofficial.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <RootNamespace>Tinify.Unofficial.Tests</RootNamespace>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
     <PackageReference Include="RichardSzalay.MockHttp" Version="6.0.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.0" />

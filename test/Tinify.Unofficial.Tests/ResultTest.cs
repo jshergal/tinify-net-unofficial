@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using System.Net.Http;
 using System.Text;
 // ReSharper disable InconsistentNaming
@@ -106,9 +107,9 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void ToBuffer_Should_ReturnNull()
+        public void ToBuffer_Should_ReturnEmpty()
         {
-            Assert.AreEqual(null, subject.ToBuffer());
+            Assert.AreEqual(Array.Empty<byte>(), subject.ToBuffer());
         }
     }
 }

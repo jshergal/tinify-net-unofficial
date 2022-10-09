@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Tinify.Unofficial
@@ -14,6 +15,12 @@ namespace Tinify.Unofficial
         {
             var result = await task.ConfigureAwait(false);
             return result.ToBuffer();
+        }
+
+        public static async Task ToStream(this Task<Result> task, Stream stream)
+        {
+            var result = await task.ConfigureAwait(false);
+            await result.ToStream(stream).ConfigureAwait(false);
         }
     }
 }

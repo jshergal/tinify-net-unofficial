@@ -2,7 +2,6 @@
 
 using System;
 using System.Net.Http;
-using Tinify.Unofficial;
 
 // ReSharper disable InconsistentNaming
 
