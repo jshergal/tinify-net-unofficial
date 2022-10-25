@@ -87,12 +87,12 @@ jobs:
           VERSION="${arrTag[2]}"
           VERSION="${VERSION//v}"
           echo Clean Version: $VERSION
-          dotnet pack src/Tinify/Tinify.csproj -v normal -c Release --include-symbols --include-source -p:PackageVersion=$VERSION -o .
+          dotnet pack src/Tinify.Unofficial/Tinify.Unofficial.csproj -v normal -c Release --include-symbols --include-source -p:PackageVersion=$VERSION -o .
 
       - name: Create pre-release NuGet package
         if: github.event_name == 'push' && github.ref_type == 'branch' && github.ref_name == 'main'
         run: |
-          dotnet pack src/Tinify/Tinify.csproj --version-suffix "prerelease.${{github.run_number}}" -v normal -c Release --include-symbols --include-source  -o .
+          dotnet pack src/Tinify.Unofficial/Tinify.Unofficial.csproj --version-suffix "prerelease.${{github.run_number}}" -v normal -c Release --include-symbols --include-source  -o .
           
       - name: Push to Nuget
         run: |
