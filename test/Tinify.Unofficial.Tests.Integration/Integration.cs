@@ -10,48 +10,15 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Tinify.Unofficial;
 using MetadataDirectory = MetadataExtractor.Directory;
+
 // ReSharper disable InconsistentNaming
 
 namespace Tinify.Unofficial.Tests.Integration
 {
-    internal sealed class TempFile : IDisposable
-    {
-        public string Path { get; private set; }
-
-        public TempFile()
-        {
-            Path = System.IO.Path.GetTempFileName();
-        }
-
-        ~TempFile()
-        {
-            Dispose(false);
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        private void Dispose(bool disposing)
-        {
-            if (disposing) GC.SuppressFinalize(this);
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(Path)) File.Delete(Path);
-            }
-            catch
-            {
-                // ignored
-            }
-
-            Path = null;
-        }
-    }
-
     internal sealed class ImageMetadata
     {
         private const string ImagePngMimeTypeString = "image/png";
@@ -123,55 +90,39 @@ namespace Tinify.Unofficial.Tests.Integration
     [TestFixture]
     public class Client_Integration
     {
-        private static Task<Source> optimized;
+        private static OptimizedImage optimized;
 
         private const string VoormediaCopyright = "Copyright Voormedia";
 
         private static TinifyClient _client;
+
+        private static string _awsAccessId;
+        private static string _awsSecretKey;
+        private static string _awsRegion;
+        private static string _awsBucket;
 
         [OneTimeSetUp]
         public static void Init()
         {
             DotNetEnv.Env.Load();
 
-            Tinify.Key = Environment.GetEnvironmentVariable("TINIFY_KEY");
-            Tinify.Proxy = Environment.GetEnvironmentVariable("TINIFY_PROXY");
+            var key = Environment.GetEnvironmentVariable("TINIFY_KEY");
+            _client = new TinifyClient(key);
 
-            _client = new TinifyClient(Tinify.Key);
+            _awsAccessId = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            _awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+            _awsRegion = Environment.GetEnvironmentVariable("AWS_REGION");
+            _awsBucket = Environment.GetEnvironmentVariable("AWS_BUCKET");
 
             var unoptimizedPath = Path.Combine(AppContext.BaseDirectory, "examples", "voormedia.png");
-            optimized = _client.ShrinkFromFile(unoptimizedPath);
+            optimized = _client.ShrinkFromFile(unoptimizedPath).Result;
         }
 
         [Test]
-        public void Should_Compress_FromFile()
+        public async Task Should_Compress_FromFile()
         {
-            using (var file = new TempFile())
-            {
-                optimized.ToFile(file.Path).Wait();
-
-                var size = new FileInfo(file.Path).Length;
-                Assert.Greater(size, 1000);
-                Assert.Less(size, 1500);
-
-                var metaData = new ImageMetadata(file.Path);
-                Assert.That(metaData.IsPng);
-
-                /* width == 137 */
-                Assert.AreEqual(137, metaData.GetImageWidth());
-                Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
-            }
-        }
-
-        [Test]
-        public void Should_Compress_FromUrl()
-        {
-            using var file = new TempFile();
-            var source = _client.ShrinkFromUrl(
-                "https://raw.githubusercontent.com/tinify/tinify-python/master/test/examples/voormedia.png"
-            );
-
-            source.ToFile(file.Path).Wait();
+            await using var file = new TempFile();
+            await optimized.ToFileAsync(file.Path).ConfigureAwait(false);
 
             var size = new FileInfo(file.Path).Length;
             Assert.Greater(size, 1000);
@@ -186,12 +137,35 @@ namespace Tinify.Unofficial.Tests.Integration
         }
 
         [Test]
-        public void Should_Resize()
+        public async Task Should_Compress_FromUrl()
         {
-            using var file = new TempFile();
-            var options = new { method = "fit", width = 50, height = 20 };
-            optimized.Resize(options).ToFile(file.Path).Wait();
+            await using var source = await _client.ShrinkFromUrl(
+                "https://raw.githubusercontent.com/tinify/tinify-python/master/test/examples/voormedia.png"
+            ).ConfigureAwait(false);
 
+            await using var file = new TempFile();
+            await source.ToFileAsync(file.Path).ConfigureAwait(false);
+
+            var size = new FileInfo(file.Path).Length;
+            Assert.Greater(size, 1000);
+            Assert.Less(size, 1500);
+
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsPng);
+
+            /* width == 137 */
+            Assert.AreEqual(137, metaData.GetImageWidth());
+            Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
+        }
+
+        [Test]
+        public async Task Should_Resize()
+        {
+            await using var result = await optimized.TransformImage(new TransformOperations(
+                new ResizeOperation(ResizeType.Fit, 50, 20)));
+
+            await using var file = new TempFile();
+            await result.ToFileAsync(file.Path).ConfigureAwait(false);
             var size = new FileInfo(file.Path).Length;
             Assert.Greater(size, 500);
             Assert.Less(size, 1000);
@@ -205,11 +179,14 @@ namespace Tinify.Unofficial.Tests.Integration
         }
 
         [Test]
-        public void Should_PreserveMetadata()
+        public async Task Should_PreserveMetadata()
         {
-            using var file = new TempFile();
-            var options = new[] {"copyright", "location"};
-            optimized.Preserve(options).ToFile(file.Path).Wait();
+            await using var file = new TempFile();
+            await using var result = await optimized.TransformImage(
+                    new TransformOperations(
+                        new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)))
+                .ConfigureAwait(false);
+            await result.ToFileAsync(file.Path).ConfigureAwait(false);
 
             var size = new FileInfo(file.Path).Length;
             Assert.Greater(size, 1000);
@@ -224,12 +201,14 @@ namespace Tinify.Unofficial.Tests.Integration
         }
 
         [Test]
-        public void Should_Resize_And_PreserveMetadata()
+        public async Task Should_Resize_And_PreserveMetadata()
         {
-            using var file = new TempFile();
-            var resizeOptions = new { method = "fit", width = 50, height = 20 };
-            var preserveOptions = new[] { "copyright", "location" };
-            optimized.Resize(resizeOptions).Preserve(preserveOptions).ToFile(file.Path).Wait();
+            await using var file = new TempFile();
+            var resizeOptions = new ResizeOperation(ResizeType.Fit, 50, 20);
+            var preserveOptions = new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation);
+            await using var result = await optimized
+                .TransformImage(new TransformOperations(resizeOptions, preserveOptions)).ConfigureAwait(false);
+            await result.ToFileAsync(file.Path);
 
             var size = new FileInfo(file.Path).Length;
             Assert.Greater(size, 500);
@@ -241,6 +220,25 @@ namespace Tinify.Unofficial.Tests.Integration
             /* width == 50 */
             Assert.AreEqual(50, metaData.GetImageWidth());
             Assert.IsTrue(metaData.ContainsStringInXmpData(VoormediaCopyright));
+        }
+
+        [Test]
+        public async Task Should_Store_Aws()
+        {
+            if (string.IsNullOrWhiteSpace(_awsAccessId) || string.IsNullOrWhiteSpace(_awsSecretKey) ||
+                string.IsNullOrWhiteSpace(_awsRegion) || string.IsNullOrWhiteSpace(_awsBucket)) return;
+
+            var dest = _awsBucket + "/my-images/voormedia.optimized.png";
+            await using var result = await optimized.TransformImage(new TransformOperations(
+                new AwsCloudStoreData()
+                {
+                    Region = _awsRegion,
+                    AwsAccessKeyId = _awsAccessId,
+                    AwsSecretAccessKey = _awsSecretKey,
+                    Path = dest,
+                }));
+
+            Assert.AreEqual($"/{dest}", result.Location?.LocalPath);
         }
     }
 }

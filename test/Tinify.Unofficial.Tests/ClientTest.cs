@@ -27,7 +27,7 @@ namespace Tinify.Unofficial.Tests
                 var _ = new TinifyClient(null);
             });
         }
-        
+
         [Test]
         public void WithEmptyKey_Should_ThrowException()
         {
@@ -36,7 +36,7 @@ namespace Tinify.Unofficial.Tests
                 var _ = new TinifyClient(string.Empty);
             });
         }
-        
+
         [Test]
         public void WithWhiteSpaceKey_Should_ThrowException()
         {
@@ -46,7 +46,7 @@ namespace Tinify.Unofficial.Tests
             });
         }
     }
-    
+
     [TestFixture]
     public class Tinify_Client_Key
     {
@@ -67,7 +67,7 @@ namespace Tinify.Unofficial.Tests
             Assert.AreSame(
                 _defaultTestClient.GetFieldValue<HttpClient>("_client"),
                 internalClient
-                );
+            );
         }
 
         [Test]
@@ -78,9 +78,9 @@ namespace Tinify.Unofficial.Tests
             Assert.AreNotSame(
                 _defaultTestClient.GetFieldValue<HttpClient>("_client"),
                 internalClient
-                );
+            );
         }
-        
+
         [Test]
         public void Should_Give_Different_Client_With_Different_Key_And_Same_Handler()
         {
@@ -89,10 +89,10 @@ namespace Tinify.Unofficial.Tests
             Assert.AreNotSame(
                 _defaultTestClient.GetFieldValue<HttpClient>("_client"),
                 internalClient
-                );
+            );
         }
     }
-    
+
     [TestFixture]
     public class Tinify_Client_Validate
     {
@@ -110,7 +110,7 @@ namespace Tinify.Unofficial.Tests
                 HttpStatusCode.BadRequest,
                 new StringContent("{\"error\":\"Input missing\",\"message\":\"No input\"}")
             );
-            
+
             var client = new TinifyClient(key, Helper.MockHandler);
 
             Assert.AreEqual(true, client.Validate().Result);
@@ -122,7 +122,8 @@ namespace Tinify.Unofficial.Tests
             const string key = "valid";
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 HttpStatusCode.TooManyRequests,
-                new StringContent("{\"error\":\"Too may requests\",\"message\":\"Your monthly limit has been exceeded\"}")
+                new StringContent(
+                    "{\"error\":\"Too may requests\",\"message\":\"Your monthly limit has been exceeded\"}")
             );
             var client = new TinifyClient(key, Helper.MockHandler);
 
@@ -137,16 +138,13 @@ namespace Tinify.Unofficial.Tests
                 HttpStatusCode.Unauthorized,
                 new StringContent("{\"error\":\"Unauthorized\",\"message\":\"Credentials are invalid\"}")
             );
-            
+
             var client = new TinifyClient(key, Helper.MockHandler);
 
-            Assert.ThrowsAsync<AccountException>(async () =>
-            {
-                await client.Validate();
-            });
+            Assert.ThrowsAsync<AccountException>(async () => { await client.Validate(); });
         }
     }
-    
+
     [TestFixture]
     public class Client_Request_WhenValid
     {
@@ -179,24 +177,24 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Should_IssueRequest_ToEndpoint()
         {
-            Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Wait();
-            Assert.AreEqual("https://api.tinify.com/shrink", Helper.LastRequest.RequestUri.ToString());
+            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            Assert.AreEqual("https://api.tinify.com/shrink", Helper.LastRequest.RequestUri?.ToString());
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var optimizedImage = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                optimizedImage.Location?.ToString()
             );
         }
 
         [Test]
         public void Should_IssueRequest_WithUserAgent()
         {
-            Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Wait();
+            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
             Assert.AreEqual(
                 Platform.UserAgent,
                 string.Join(" ", Helper.LastRequest.Headers.GetValues("User-Agent"))
@@ -206,7 +204,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Should_UpdateCompressionCount()
         {
-            Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Wait();
+            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
             Assert.AreEqual(12, TinifyClient.CompressionCount);
         }
     }
@@ -221,7 +219,7 @@ namespace Tinify.Unofficial.Tests
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new TaskCanceledException());
 
@@ -235,12 +233,12 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                response.Location?.ToString()
             );
         }
     }
@@ -255,7 +253,7 @@ namespace Tinify.Unofficial.Tests
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new TaskCanceledException());
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
@@ -267,7 +265,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -287,13 +285,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new HttpRequestException("An error occurred while sending the request"));
 
@@ -307,12 +305,12 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                response.Location?.ToString()
             );
         }
     }
@@ -328,13 +326,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new HttpRequestException(ErrorOccurred));
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
@@ -346,7 +344,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -366,13 +364,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new Exception("some error"));
 
@@ -386,12 +384,12 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                response.Location?.ToString()
             );
         }
     }
@@ -406,13 +404,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
                 .Respond(_ => throw new Exception("some error"));
             Helper.MockHandler.Expect("https://api.tinify.com/shrink")
@@ -424,7 +422,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -444,13 +442,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 584,
                 new StringContent("{\"error\":\"InternalServerError\",\"message\":\"Oops!\"}")
@@ -466,12 +464,12 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                response.Location?.ToString()
             );
         }
     }
@@ -486,13 +484,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 584,
                 new StringContent("{\"error\":\"InternalServerError\",\"message\":\"Oops!\"}")
@@ -509,7 +507,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ServerException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -529,13 +527,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 543,
                 new StringContent("<!-- this is not json -->")
@@ -551,12 +549,12 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_ReturnResponse()
+        public async Task Should_ReturnResponse()
         {
-            var response = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
-                response.Location.ToString()
+                response.Location?.ToString()
             );
         }
     }
@@ -571,13 +569,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 543,
                 new StringContent("<!-- this is not json -->")
@@ -594,11 +592,11 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ServerException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
-                "Error while parsing response: '<' is an invalid start of a value. Path: "+
+                "Error while parsing response: '<' is an invalid start of a value. Path: " +
                 "$ | LineNumber: 0 | BytePositionInLine: 0. (HTTP 543/ParseError)",
                 error?.Message
             );
@@ -615,13 +613,13 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
             Helper.ResetMockHandler();
             Client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
-            
+
             Helper.MockHandler.Expect("https://api.tinify.com/shrink").Respond(
                 (HttpStatusCode) 492,
                 new StringContent("{\"error\":\"BadRequest\",\"message\":\"Oops!\"}")
@@ -633,7 +631,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ClientException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -653,7 +651,7 @@ namespace Tinify.Unofficial.Tests
         {
             TinifyClient.ClearClients();
         }
-        
+
         [SetUp]
         public void SetUp()
         {
@@ -670,7 +668,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -679,12 +677,12 @@ namespace Tinify.Unofficial.Tests
             );
         }
     }
-    
+
     [TestFixture]
     public class Client_With_Invalid_Api_Key
     {
         private TinifyClient _client;
-        
+
         [OneTimeSetUp]
         public void SetUp()
         {
@@ -703,7 +701,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png");
+                await using var _ = await _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png");
             });
         }
 
@@ -712,7 +710,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await _client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes);
             });
         }
 
@@ -721,7 +719,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg);
+                await using var _ = await _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg);
             });
         }
     }
@@ -755,7 +753,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void FromFile_Should_Return_ImageLocation_Task()
         {
-            Assert.IsInstanceOf<Task<ImageLocation>>(
+            Assert.IsInstanceOf<Task<OptimizedImage>>(
                 _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png")
             );
         }
@@ -763,13 +761,13 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void FromBuffer_Should_Return_ImageLocation_Task()
         {
-            Assert.IsInstanceOf<Task<ImageLocation>>(_client.ShrinkFromBuffer(Helper.MockPngImageBytes));
+            Assert.IsInstanceOf<Task<OptimizedImage>>(_client.ShrinkFromBuffer(Helper.MockPngImageBytes));
         }
 
         [Test]
         public void FromUrl_Should_Return_ImageLocation_Task()
         {
-            Assert.IsInstanceOf<Task<ImageLocation>>(
+            Assert.IsInstanceOf<Task<OptimizedImage>>(
                 _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg)
             );
         }
@@ -783,10 +781,13 @@ namespace Tinify.Unofficial.Tests
                 new StringContent("{'error':'Source not found','message':'Cannot parse URL'}")
             );
 
-            Assert.ThrowsAsync<ClientException>(async () => { await _client.ShrinkFromUrl("file://wrong"); });
+            Assert.ThrowsAsync<ClientException>(async () =>
+            {
+                await using var _ = await _client.ShrinkFromUrl("file://wrong");
+            });
         }
     }
-    
+
     [TestFixture]
     public class Tinify_Client_Operations
     {
@@ -797,6 +798,11 @@ namespace Tinify.Unofficial.Tests
         public void OneTimeSetUp()
         {
             TinifyClient.ClearClients();
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             Helper.ResetMockHandler();
             _client = new TinifyClient("valid", Helper.MockHandler);
 
@@ -812,19 +818,24 @@ namespace Tinify.Unofficial.Tests
                 new StringContent(ExpectedContent)
             );
         }
-        
+
         [Test]
         public void Preserve_Should_Set_Proper_Request_Body()
         {
-            Helper.EnqueueShrinkAndResult("copyrighted file");
+            const string expectedData = "copyrighted file";
+            Helper.EnqueueShrinkAndResult(expectedData);
 
             var imageOperations =
-                ImageTransformOperations.CreatePreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location);
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+                new TransformOperations(
+                    new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
+            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var result = _client.GetResult(optimizedImage, imageOperations).Result;
+
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("copyrighted file"),
-                _client.GetResult(imageLocation, imageOperations).ToBuffer().Result
+                Encoding.UTF8.GetBytes(expectedData),
+                result.ToBuffer()
             );
+
             using var document = JsonDocument.Parse(Helper.LastBody);
             var preserveProperty = document.RootElement.GetProperty("preserve");
             Assert.AreEqual(JsonValueKind.Array, preserveProperty.ValueKind);
@@ -837,24 +848,25 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Client_Should_Set_Multiple_Options()
         {
-            Helper.EnqueueShrinkAndResult("copyrighted resized file");
+            const string expectedData = "copyrighted resized file";
+            Helper.EnqueueShrinkAndResult(expectedData);
 
-            var imageOperations = new ImageTransformOperations(
+            var imageOperations = new TransformOperations(
                 new ResizeOperation(ResizeType.Fit, 100, 60),
-                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location),
-                null);
+                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
 
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var result = _client.GetResult(optimizedImage, imageOperations).Result;
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("copyrighted resized file"),
-                _client.GetResult(imageLocation, imageOperations).ToBuffer().Result
+                Encoding.UTF8.GetBytes(expectedData),
+                result.ToBuffer()
             );
-            
+
             using var document = JsonDocument.Parse(Helper.LastBody);
             var resizeProperty = document.RootElement.GetProperty("resize");
             Assert.AreEqual(100, resizeProperty.GetProperty("width").GetInt32());
             Assert.AreEqual(60, resizeProperty.GetProperty("height").GetInt32());
-            
+
             var preserveProperty = document.RootElement.GetProperty("preserve");
             Assert.AreEqual(JsonValueKind.Array, preserveProperty.ValueKind);
             Assert.AreEqual(2, preserveProperty.GetArrayLength());
@@ -866,14 +878,16 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Resize_Should_Set_Data()
         {
-            Helper.EnqueueShrinkAndResult("small file");
+            const string expectedData = "small file";
+            Helper.EnqueueShrinkAndResult(expectedData);
 
-            var imageOperations = ImageTransformOperations.CreateResizeOperation(ResizeType.Scale, 400);
+            var imageOperations = new TransformOperations(new ResizeOperation(ResizeType.Scale, 400));
 
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var result = _client.GetResult(optimizedImage, imageOperations).Result;
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("small file"),
-                _client.GetResult(imageLocation, imageOperations).ToBuffer().Result
+                Encoding.UTF8.GetBytes(expectedData),
+                result.ToBuffer()
             );
 
             using var document = JsonDocument.Parse(Helper.LastBody);
@@ -886,7 +900,7 @@ namespace Tinify.Unofficial.Tests
         {
             Helper.EnqueuShrinkAndStore();
 
-            var imageOperations = ImageTransformOperations.CreateStoreOperation( 
+            var imageOperations = new TransformOperations(
                 new AwsCloudStoreData
                 {
                     AwsAccessKeyId = "AccessKeyId",
@@ -894,21 +908,21 @@ namespace Tinify.Unofficial.Tests
                     Region = "us-west-1",
                     Path = "example-bucket/my-images/optimized.jpg",
                 });
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
-            _client.GetResult(imageLocation, imageOperations).Wait();
+            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var result = _client.GetResult(optimizedImage, imageOperations).Result;
 
             using var document = JsonDocument.Parse(Helper.LastBody);
             var storeElement = document.RootElement.GetProperty("store");
             var serviceElement = storeElement.GetProperty("service");
             Assert.AreEqual("s3", serviceElement.GetString());
         }
-        
+
         [Test]
-        public void Store_Should_Return_Result_With_Location()
+        public async Task Store_Should_Return_Result_With_Location()
         {
             Helper.EnqueuShrinkAndStore();
 
-            var imageOperations = ImageTransformOperations.CreateStoreOperation(
+            var imageOperations = new TransformOperations(
                 new AwsCloudStoreData
                 {
                     AwsAccessKeyId = "AccessKeyId",
@@ -916,63 +930,71 @@ namespace Tinify.Unofficial.Tests
                     Region = "us-west-1",
                     Path = "example-bucket/my-images/optimized.jpg",
                 });
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var optimizedImage =
+                await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var result = await _client.GetResult(optimizedImage, imageOperations).ConfigureAwait(false);
             Assert.AreEqual(
                 new Uri("https://bucket.s3.amazonaws.com/example"),
-                _client.GetResult(imageLocation, imageOperations).Result.Location
+                result.Location
             );
         }
 
         [Test]
-        public void ToBuffer_Should_ReturnImageData()
+        public async Task ToBuffer_Should_ReturnImageData()
         {
-            Helper.EnqueueShrinkAndResult("compressed file");
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            const string expectedData = "compressed file";
+            Helper.EnqueueShrinkAndResult(expectedData);
+            await using var optimizedImage =
+                await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var result = await _client.GetResult(optimizedImage).ConfigureAwait(false);
 
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("compressed file"),
-                _client.GetResult(imageLocation).ToBuffer().Result
+                Encoding.UTF8.GetBytes(expectedData),
+                result.ToBuffer()
             );
         }
-        
+
         [Test]
         public void CopyToBuffer_Should_ReturnImageData()
         {
-            Helper.EnqueueShrinkAndResult("compressed file");
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            const string expectedData = "compressed file";
+            Helper.EnqueueShrinkAndResult(expectedData);
+            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
 
-            var result = _client.GetResult(imageLocation).Result;
+            using var result = _client.GetResult(optimizedImage).Result;
             using var buffer = MemoryOwner<byte>.Allocate(result.DataLength);
             result.CopyToBuffer(buffer.Span);
 
             Assert.IsTrue(
-                Encoding.ASCII.GetBytes("compressed file").AsSpan().SequenceEqual(buffer.Span)
+                Encoding.UTF8.GetBytes(expectedData).AsSpan().SequenceEqual(buffer.Span)
             );
         }
 
         [Test]
-        public void ToFile_Should_StoreImageData()
+        public async Task ToFile_Should_StoreImageData()
         {
-            Helper.EnqueueShrinkAndResult("compressed file");
+            const string expectedData = "compressed file";
+            Helper.EnqueueShrinkAndResult(expectedData);
 
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
-            using var file = new TempFile();
-            _client.GetResult(imageLocation).ToFile(file.Path).Wait();
+            await using var optimizedImage = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var file = new TempFile();
+            await optimizedImage.ToFileAsync(file.Path);
             Assert.AreEqual(
-                Encoding.ASCII.GetBytes("compressed file"),
-                File.ReadAllBytes(file.Path)
+                Encoding.UTF8.GetBytes("compressed file"),
+                await File.ReadAllBytesAsync(file.Path)
             );
         }
-        
+
         [Test]
-        public void To_Stream_Should_StoreImageData()
+        public async Task To_Stream_Should_StoreImageData()
         {
             Helper.EnqueueShrinkAndResult("compressed file");
-            var expected = Encoding.ASCII.GetBytes("compressed file");
+            var expected = Encoding.UTF8.GetBytes("compressed file");
 
-            var imageLocation = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
-            using var ms = new MemoryStream(expected.Length);
-            _client.GetResult(imageLocation).ToStream(ms).Wait();
+            await using var optimizedImage = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var result = await _client.GetResult(optimizedImage).ConfigureAwait(false);
+            using var ms = new MemoryStream(expected.Length * 2);
+            await result.ToStreamAsync(ms).ConfigureAwait(false);
             Assert.AreEqual(expected, ms.ToArray());
         }
     }

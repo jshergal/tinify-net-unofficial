@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Tinify.Unofficial
 {
-	public record ImageTransformOperations
+	public record TransformOperations
 	{
 		[JsonPropertyName("preserve")] public string[] Preserve { get; }
 
@@ -14,32 +14,16 @@ namespace Tinify.Unofficial
 
 		[JsonPropertyName("store")] public object CloudStore { get; }
 
-		public static ImageTransformOperations CreatePreserveOperation(PreserveOptions options) =>
-			new(new PreserveOperation(options));
-
-		public static ImageTransformOperations CreateResizeOperation(ResizeType resizeType, int? width = null,
-			int? height = null) => new(new ResizeOperation(resizeType, width, height));
-
-		public static ImageTransformOperations CreateStoreOperation(AwsCloudStoreData cloudData) =>
-			new(cloudData);
-
-		public static ImageTransformOperations CreateStoreOperation(GoogleCloudStoreData cloudData) =>
-			new(cloudData);
-
-		private ImageTransformOperations(ResizeOperation resizeOperation) : this(resizeOperation, null, null)
+		public TransformOperations(PreserveOperation preserveOperation) : this(null, preserveOperation)
 		{
 		}
 
-		private ImageTransformOperations(PreserveOperation preserveOperation) : this(null, preserveOperation, null)
+		public TransformOperations(CloudStoreData cloudData) : this(null, cloudData: cloudData)
 		{
 		}
 
-		private ImageTransformOperations(CloudStoreData cloudData) : this(null, null, cloudData)
-		{
-		}
-
-		public ImageTransformOperations(ResizeOperation resizeOperation,
-			PreserveOperation preserveOperation, CloudStoreData cloudData)
+		public TransformOperations(ResizeOperation resizeOperation,
+			PreserveOperation preserveOperation = null, CloudStoreData cloudData = null)
 		{
 			if (resizeOperation is null && preserveOperation is null && cloudData is null)
 			{
@@ -127,9 +111,5 @@ namespace Tinify.Unofficial
 
 	public abstract record CloudStoreData
 	{
-		internal string ToJsonData()
-		{
-			return JsonSerializer.Serialize<object>(this, TinifyConstants.SerializerOptions);
-		}
 	}
 }

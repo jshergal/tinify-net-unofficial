@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Versioning;
 using System.Runtime.InteropServices;
@@ -12,9 +14,9 @@ namespace Tinify.Unofficial.Internal
         private static string GetOSPlatform()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "Windows";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "OSX";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "Linux";
-            else return "Unknown";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "OSX";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "Linux";
+            return "Unknown";
         }
 
         private static string GetClientVersion()
@@ -38,25 +40,26 @@ namespace Tinify.Unofficial.Internal
 
             var components = framework.Split(',');
 
-            var libraryFrameworkName = components[0].Trim();
-            var libraryFrameworkVersion = "unknown";
+            var libFrameworkName = components[0].Trim();
+            var libFrameworkVersion = GetFrameworkVersion(components.Skip(1));
 
-            for (var i = 1; i < components.Length; i++)
+            return $"{libFrameworkName}/{libFrameworkVersion} ({GetOSPlatform()} {RuntimeInformation.FrameworkDescription})";
+        }
+
+        private static string GetFrameworkVersion(IEnumerable<string> components)
+        {
+            var versionSpan = "Version".AsSpan();
+            foreach(var component in components)
             {
-                var pair = components[i].Split('=');
+                var pair = component.Split('=');
                 if (pair.Length != 2) continue;
 
-                if (pair[0].AsSpan().Trim().Equals("Version".AsSpan(), StringComparison.OrdinalIgnoreCase))
-                {
-                    libraryFrameworkVersion = pair[1].AsSpan().Trim().TrimStart('v').ToString();
-                }
+                if (!pair[0].AsSpan().Trim().Equals(versionSpan, StringComparison.OrdinalIgnoreCase)) continue;
+
+                return pair[1].AsSpan().Trim().TrimStart('v').ToString();
             }
 
-            var os = GetOSPlatform();
-
-            var runtimeFrameworkDetails = RuntimeInformation.FrameworkDescription;
-
-            return $"{libraryFrameworkName}/{libraryFrameworkVersion} ({os} {runtimeFrameworkDetails})";
+            return "unknown";
         }
     }
 }

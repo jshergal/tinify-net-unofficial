@@ -40,7 +40,11 @@ namespace Tinify.Unofficial
         private static readonly Dictionary<string, HttpClient> HttpClients = new();
 
         private static readonly object Lock = new();
-        public static void ClearClients()
+        
+        /// <summary>
+        /// Clears out and disposes of all HttpClients held by the Tinify client.
+        /// </summary>
+        internal static void ClearClients()
         {
             lock (Lock)
             {
@@ -93,61 +97,39 @@ namespace Tinify.Unofficial
             _client = GetClient(key, handler);
         }
 
-        public async Task<ImageLocation> ShrinkFromFile(string path)
+        public async Task<OptimizedImage> ShrinkFromFile(string path)
         {
             var buffer = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
             return await ShrinkFromBuffer(buffer).ConfigureAwait(false);
         }
 
-        public async Task<ImageLocation> ShrinkFromBuffer(byte[] buffer)
+        public async Task<OptimizedImage> ShrinkFromBuffer(byte[] buffer)
         {
-            var response = await Request(HttpMethod.Post, ShrinkUri, new ReadOnlyMemoryContent(buffer))
+            using var response = await Request(HttpMethod.Post, ShrinkUri, new ReadOnlyMemoryContent(buffer))
                 .ConfigureAwait(false);
-            var location = response.Headers.Location;
-
-            return new ImageLocation(location);
+            return await OptimizedImage.CreateAsync(response, this);
         }
 
-        public async Task<ImageLocation> ShrinkFromUrl(string url)
+        public async Task<OptimizedImage> ShrinkFromUrl(string url)
         {
             var body = new StringContent($"{{\"source\":{{\"url\":\"{url}\"}}}}",
                 Encoding.UTF8, "application/json");
-            var response = await Request(HttpMethod.Post, ShrinkUri, body);
-            var location = response.Headers.Location;
-
-            return new ImageLocation(location);
+            
+            var response = await Request(HttpMethod.Post, ShrinkUri, body).ConfigureAwait(false);
+            return await OptimizedImage.CreateAsync(response, this, true);
         }
 
-        public async Task SaveToFile(ImageLocation imageLocation, string fileName)
+        internal async Task<Result> GetResult(OptimizedImage optimizedImage, TransformOperations operations = null)
         {
-            await GetResult(imageLocation, null).ToFile(fileName);
+            using var response = operations is null
+                ? await Request(HttpMethod.Get, optimizedImage.Location).ConfigureAwait(false)
+                : await Request(HttpMethod.Post, optimizedImage.Location, operations)
+                    .ConfigureAwait(false);
+
+            return await Result.Create(response, true).ConfigureAwait(false);
         }
 
-        public async Task<byte[]> SaveToBuffer(ImageLocation imageLocation)
-        {
-            return await GetResult(imageLocation, null).ToBuffer();
-        }
-
-        public async Task<Result> GetResult(ImageLocation imageLocation, ImageTransformOperations operations = null)
-        {
-            HttpResponseMessage response;
-            if (operations is null) {
-                response = await Request(HttpMethod.Get, imageLocation.Location).ConfigureAwait(false);
-            } else {
-                response = await Request(HttpMethod.Post, imageLocation.Location, operations).ConfigureAwait(false);
-            }
-
-#if NETSTANDARD2_1
-            byte[] body = null;
-            if (response.Content is not null)
-                body = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-#else
-            var body = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-#endif
-            return new Result(response.Headers, response.Content?.Headers, body);
-        }
-
-        private async Task<HttpResponseMessage> Request(HttpMethod method, Uri url, ImageTransformOperations options)
+        private async Task<HttpResponseMessage> Request(HttpMethod method, Uri url, TransformOperations options)
         {
             var json = JsonSerializer.Serialize(options, TinifyConstants.SerializerOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");

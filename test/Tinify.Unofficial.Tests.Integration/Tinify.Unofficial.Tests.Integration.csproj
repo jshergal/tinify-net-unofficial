@@ -4,7 +4,7 @@
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
 		<PackageId>Tinify.Unofficial.Tests.Integration</PackageId>
 		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-		<LangVersion>8.0</LangVersion>
+		<LangVersion>9.0</LangVersion>
 		<RootNamespace>Tinify.Tests.Integration</RootNamespace>
 	</PropertyGroup>
 
@@ -32,6 +32,12 @@
 
 	<ItemGroup>
 		<Folder Include="Properties\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\TempFile.cs">
+	    <Link>TempFile.cs</Link>
+	  </Compile>
 	</ItemGroup>
 
 	<Target Name="CopyEnv" AfterTargets="AfterBuild">

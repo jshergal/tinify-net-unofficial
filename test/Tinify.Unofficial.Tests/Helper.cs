@@ -6,42 +6,29 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Tinify.Unofficial.Tests
 {
-    internal sealed class TempFile : IDisposable
-    {
-        public string Path { get; private set; } = System.IO.Path.GetTempFileName();
-        
-        ~TempFile() => Dispose(false);
-
-        public void Dispose() => Dispose(true);
-
-        private void Dispose(bool disposing)
-        {
-            if (disposing) GC.SuppressFinalize(this);
-            try
-            {
-                if (!string.IsNullOrEmpty(Path)) File.Delete(Path);
-            }
-            catch
-            {
-                // ignored
-            }
-
-            Path = null;
-        }
-    }
-    
     internal static class Helper
     {
         public const string HttpsExampleComTestJpg = "https://example.com/test.jpg";
         public const string DefaultKey = "key";
         
-        public static readonly byte[] MockPngImageBytes = Encoding.ASCII.GetBytes("png file");
+        public static readonly byte[] MockPngImageBytes = Encoding.UTF8.GetBytes("png file");
 
         public static readonly MockHttpMessageHandler MockHandler = new();
-        public static HttpRequestMessage LastRequest;
+        private static HttpRequestMessage _last;
+
+        public static HttpRequestMessage LastRequest
+        {
+            get => _last;
+            set
+            {
+                _last?.Dispose();
+                _last = value;
+            }
+        }
         public static string LastBody;
 
         public static void ResetMockHandler()
@@ -85,8 +72,10 @@ namespace Tinify.Unofficial.Tests
                     LastBody = req.Content.ReadAsStringAsync().Result;
                 }
 
+                var data = Encoding.UTF8.GetBytes(body);
                 var res = new HttpResponseMessage(HttpStatusCode.OK);
-                res.Content = new StringContent(body);
+                res.Content = new ReadOnlyMemoryContent(data);
+                res.Content.Headers.ContentLength = data.Length;
                 return res;
             });
         }
