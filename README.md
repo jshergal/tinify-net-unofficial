@@ -19,17 +19,59 @@ Install-Package Tinify.Unofficial
 ## Usage
 
 ```csharp
-using TinifyAPI;
+using Tinify.Unofficial;
 
-class Compress
-{
-  static void Main()
-  {
-    Tinify.Key = "YOUR_API_KEY";
-    Tinify.FromFile("unoptimized.png").ToFile("optimized.png").Wait();
-  }
-}
+var client = new TinifyClient("YOUR_API_KEY");
+await using var optimizedImage = await client.ShrinkFromFile("unoptimized.png");
+await optimizedImage.ToFileAsync("optimized.png");
 ```
+
+To perform other transform operations, simply call the `Transform` method
+on the optimized image
+
+```csharp
+await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
+
+var resizeOptions = new ResizeOperation(ResizeType.Fit, 50, 20);
+var preserveOptions = new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation);
+var transformOperations = new TransformOperations(resizeOptions, preserveOptions);
+await using var result = await optimized.TransformImage(transformOperations);
+
+await result.ToFileAsync("optimized_and_transformed.jpg");
+```
+
+You can save both `OptimizedImage` and `Result` objects to a file, to a stream, to a buffer or pass in a preallocated buffer and copy the data directly to the buffer
+```csharp
+await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
+await using var transformedImage =
+    await optimizedImage.TransformImage(new TransformOperations(
+        new ResizeOperation(ResizeType.Fit, 50, 20)
+    ));
+                                    
+var optimizedBuffer = await optimizedImage.ToBufferAsync();
+
+// Note the Result object already holds an internal buffer
+// with the image data and so will just return a copy synchronously
+var transformedBuffer = transformedImage.ToBuffer();
+
+using var msOptimized = new MemoryStream();
+await optimizedImage.ToStreamAsync(msOptimized);
+
+using var msTransformed = new MemoryStream();
+await transformedImage.ToStreamAsync(msTransformed);
+
+var bufferOptimized = new byte[optimizedImage.ImageSize];
+await optimizedImage.CopyToBufferAsync(bufferOptimized);
+
+// Note the Result object already holds an internal buffer
+// with the image data and so will just copy the data synchronously
+var bufferTransformed = new byte[transformedImage.DataLength];
+transformedImage.CopyDataToBuffer(bufferTransformed);
+```
+
+__*Note:*__  
+Because both `OptimizedImage` and `Result` objects maintain and internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
+Both objects implement both `IDisposable` and `IAsyncDisposable`
 
 ## Running tests
 

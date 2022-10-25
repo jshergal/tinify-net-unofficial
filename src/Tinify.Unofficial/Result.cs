@@ -12,9 +12,24 @@ namespace Tinify.Unofficial
     public sealed class Result : IDisposable, IAsyncDisposable
     {
         private MemoryOwner<byte>? _data;
+
+        private Result()
+        {
+        }
+
         public int? Width { get; private init; }
         public int? Height { get; private init; }
         public Uri? Location { get; private init; }
+
+        public int DataLength => _data!.Length;
+
+        public long? Size { get; private init; }
+
+        public string? ContentType { get; private init; }
+
+        public async ValueTask DisposeAsync() => await Task.Run(DisposeCore).ConfigureAwait(false);
+
+        public void Dispose() => DisposeCore();
 
         internal static async Task<Result> Create(HttpResponseMessage response, bool disposeResponse = false)
         {
@@ -38,10 +53,6 @@ namespace Tinify.Unofficial
             {
                 if (disposeResponse) response.Dispose();
             }
-        }
-
-        private Result()
-        {
         }
 
         private static int? GetIntValueFromHeader(HttpHeaders? headers, string value)
@@ -81,14 +92,6 @@ namespace Tinify.Unofficial
 
         public void CopyToBuffer(Span<byte> buffer) => _data!.Span.CopyTo(buffer);
 
-        public int DataLength => _data!.Length;
-
-        public long? Size { get; private init; }
-
-        public string? ContentType { get; private init; }
-
-        public void Dispose() => DisposeCore();
-
         private void DisposeCore()
         {
             if (_data is null) return;
@@ -96,7 +99,5 @@ namespace Tinify.Unofficial
             _data.Dispose();
             _data = null;
         }
-
-        public async ValueTask DisposeAsync() => await Task.Run(DisposeCore).ConfigureAwait(false);
     }
 }
