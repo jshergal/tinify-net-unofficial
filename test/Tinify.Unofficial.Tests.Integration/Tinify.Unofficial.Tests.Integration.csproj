@@ -2,10 +2,10 @@
 
 	<PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
-		<AssemblyName>Tinify.Tests.Integration</AssemblyName>
-		<PackageId>Tinify.Tests.Integration</PackageId>
+		<PackageId>Tinify.Unofficial.Tests.Integration</PackageId>
 		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-		<LangVersion>8.0</LangVersion>
+		<LangVersion>9.0</LangVersion>
+		<RootNamespace>Tinify.Tests.Integration</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="../../src/Tinify/Tinify.csproj" />
+		<ProjectReference Include="..\..\src\Tinify.Unofficial\Tinify.Unofficial.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -32,6 +32,12 @@
 
 	<ItemGroup>
 		<Folder Include="Properties\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\TempFile.cs">
+	    <Link>TempFile.cs</Link>
+	  </Compile>
 	</ItemGroup>
 
 	<Target Name="CopyEnv" AfterTargets="AfterBuild">

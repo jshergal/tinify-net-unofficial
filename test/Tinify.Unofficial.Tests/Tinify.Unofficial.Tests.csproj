@@ -2,16 +2,18 @@
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
-    <AssemblyName>Tinify.Tests</AssemblyName>
-    <PackageId>Tinify.Tests</PackageId>
+    <PackageId>Tinify.Unofficial.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RootNamespace>Tinify.Unofficial.Tests</RootNamespace>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Tinify/Tinify.csproj" />
+    <ProjectReference Include="..\..\src\Tinify.Unofficial\Tinify.Unofficial.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
     <PackageReference Include="RichardSzalay.MockHttp" Version="6.0.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.0" />
@@ -28,5 +30,10 @@
     <Content Include="examples\dummy.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\TempFile.cs">
+      <Link>TempFile.cs</Link>
+    </Compile>
   </ItemGroup>
 </Project>

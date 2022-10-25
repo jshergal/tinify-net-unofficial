@@ -1,44 +1,44 @@
+using System;
+using System.IO;
 using NUnit.Framework;
 using RichardSzalay.MockHttp;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace TinifyAPI.Tests
+namespace Tinify.Unofficial.Tests
 {
     internal static class Helper
     {
-        private static readonly FieldInfo HttpClientField = typeof(Client)
-            .GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic);
+        public const string HttpsExampleComTestJpg = "https://example.com/test.jpg";
+        public const string DefaultKey = "key";
+        
+        public static readonly byte[] MockPngImageBytes = Encoding.UTF8.GetBytes("png file");
 
-        private static readonly FieldInfo HttpHandlerField = GetHttpHandlerField();
+        public static readonly MockHttpMessageHandler MockHandler = new();
+        private static HttpRequestMessage _last;
 
-        private static FieldInfo GetHttpHandlerField()
+        public static HttpRequestMessage LastRequest
         {
-            var msgInvoker = typeof(HttpMessageInvoker);
-            var handlerField = msgInvoker.GetField("handler", BindingFlags.Instance | BindingFlags.NonPublic);
-            return handlerField ?? msgInvoker.GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic);
+            get => _last;
+            set
+            {
+                _last?.Dispose();
+                _last = value;
+            }
         }
-
-        public static MockHttpMessageHandler MockHandler;
-        public static HttpRequestMessage LastRequest;
         public static string LastBody;
 
-        public static void MockClient(Client test)
+        public static void ResetMockHandler()
         {
-            MockHandler = new MockHttpMessageHandler();
-
-            /* Terrible hack to get/mock/replace client property. */
-            var client = (HttpClient) HttpClientField.GetValue(test);
-            HttpHandlerField.SetValue(client, MockHandler);
-
-            Client.RetryDelay = 10;
+            MockHandler.ResetBackendDefinitions();
+            MockHandler.ResetExpectations();
         }
 
-        public static void EnqueueShrink(Client test)
+        public static void EnqueueShrink()
         {
-            MockClient(test);
-
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(req =>
             {
                 LastRequest = req;
@@ -54,10 +54,8 @@ namespace TinifyAPI.Tests
             });
         }
 
-        public static void EnqueueShrinkAndResult(Client test, string body)
+        public static void EnqueueShrinkAndResult(string body)
         {
-            MockClient(test);
-
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(_ =>
             {
                 var res = new HttpResponseMessage(HttpStatusCode.Created);
@@ -74,16 +72,16 @@ namespace TinifyAPI.Tests
                     LastBody = req.Content.ReadAsStringAsync().Result;
                 }
 
+                var data = Encoding.UTF8.GetBytes(body);
                 var res = new HttpResponseMessage(HttpStatusCode.OK);
-                res.Content = new StringContent(body);
+                res.Content = new ReadOnlyMemoryContent(data);
+                res.Content.Headers.ContentLength = data.Length;
                 return res;
             });
         }
 
-        public static void EnqueuShrinkAndStore(Client test)
+        public static void EnqueuShrinkAndStore()
         {
-            MockClient(test);
-
             MockHandler.Expect("https://api.tinify.com/shrink").Respond(_ =>
             {
                 var res = new HttpResponseMessage(HttpStatusCode.Created);
@@ -106,6 +104,17 @@ namespace TinifyAPI.Tests
             });
         }
 
+        // Helper method for getting a private field
+        // Taken from this SO answer: https://stackoverflow.com/a/46488844 posted by
+        // Bruno Zell https://stackoverflow.com/users/5185376/bruno-zell
+        public static T GetFieldValue<T>(this object obj, string name)
+        {
+            // Set the flags so that private and public fields from instances will be found
+            var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var field = obj.GetType().GetField(name, bindingFlags);
+            return (T) field?.GetValue(obj);
+        }
+            
         // Helper method added due to a behavior change in .Net 6.0 where instead of returning null,
         // HttpContent will be of type EmptyContentType
 #if NET5_0_OR_GREATER
