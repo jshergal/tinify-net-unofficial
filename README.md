@@ -35,8 +35,8 @@ await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
 
 var resizeOptions = new ResizeOperation(ResizeType.Fit, 50, 20);
 var preserveOptions = new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation);
-var transformOperations = new TransformOperations(resizeOptions, preserveOptions);
-await using var result = await optimized.TransformImage(transformOperations);
+var transformOperations = new TransformOperations(resize: resizeOptions, preserve: preserveOptions);
+await using var result = await optimizedImage.TransformImage(transformOperations);
 
 await result.ToFileAsync("optimized_and_transformed.jpg");
 ```
@@ -48,7 +48,7 @@ preallocated buffer and copy the data directly to the buffer
 await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
 await using var transformedImage =
     await optimizedImage.TransformImage(new TransformOperations(
-        new ResizeOperation(ResizeType.Fit, 50, 20)
+        resize: new ResizeOperation(ResizeType.Fit, 50, 20)
     ));
                                     
 var optimizedBuffer = await optimizedImage.ToBufferAsync();
@@ -63,13 +63,13 @@ await optimizedImage.ToStreamAsync(msOptimized);
 using var msTransformed = new MemoryStream();
 await transformedImage.ToStreamAsync(msTransformed);
 
-var bufferOptimized = new byte[optimizedImage.ImageSize];
+var bufferOptimized = new byte[optimizedImage.ImageSize.Value];
 await optimizedImage.CopyToBufferAsync(bufferOptimized);
 
 // Note the ImageResult object already holds an internal buffer
 // with the image data and so will just copy the data synchronously
 var bufferTransformed = new byte[transformedImage.DataLength];
-transformedImage.CopyDataToBuffer(bufferTransformed);
+transformedImage.CopyToBuffer(bufferTransformed);
 ```
 
 __*Note:*__  
