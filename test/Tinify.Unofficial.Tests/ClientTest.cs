@@ -827,7 +827,7 @@ namespace Tinify.Unofficial.Tests
 
             var imageOperations =
                 new TransformOperations(
-                    new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
+                    preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
             using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
 
@@ -852,8 +852,8 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueueShrinkAndResult(expectedData);
 
             var imageOperations = new TransformOperations(
-                new ResizeOperation(ResizeType.Fit, 100, 60),
-                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
+                resize: new ResizeOperation(ResizeType.Fit, 100, 60),
+                preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
 
             using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
@@ -901,7 +901,7 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueuShrinkAndStore();
 
             var imageOperations = new TransformOperations(
-                new AwsCloudStoreOperation
+                cloud: new AwsCloudStoreOperation
                 {
                     AwsAccessKeyId = "AccessKeyId",
                     AwsSecretAccessKey = "SecretAccessKey",
@@ -923,7 +923,7 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueuShrinkAndStore();
 
             var imageOperations = new TransformOperations(
-                new AwsCloudStoreOperation
+                cloud: new AwsCloudStoreOperation
                 {
                     AwsAccessKeyId = "AccessKeyId",
                     AwsSecretAccessKey = "SecretAccessKey",

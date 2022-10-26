@@ -184,7 +184,7 @@ namespace Tinify.Unofficial.Tests.Integration
             await using var file = new TempFile();
             await using var result = await optimized.TransformImage(
                     new TransformOperations(
-                        new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)))
+                        preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)))
                 .ConfigureAwait(false);
             await result.ToFileAsync(file.Path).ConfigureAwait(false);
 
@@ -207,7 +207,8 @@ namespace Tinify.Unofficial.Tests.Integration
             var resizeOptions = new ResizeOperation(ResizeType.Fit, 50, 20);
             var preserveOptions = new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation);
             await using var result = await optimized
-                .TransformImage(new TransformOperations(resizeOptions, preserveOptions)).ConfigureAwait(false);
+                .TransformImage(new TransformOperations(resize: resizeOptions, preserve: preserveOptions))
+                .ConfigureAwait(false);
             await result.ToFileAsync(file.Path);
 
             var size = new FileInfo(file.Path).Length;
@@ -230,7 +231,7 @@ namespace Tinify.Unofficial.Tests.Integration
 
             var dest = _awsBucket + "/my-images/voormedia.optimized.png";
             await using var result = await optimized.TransformImage(new TransformOperations(
-                new AwsCloudStoreOperation()
+                cloud: new AwsCloudStoreOperation()
                 {
                     Region = _awsRegion,
                     AwsAccessKeyId = _awsAccessId,
@@ -239,6 +240,50 @@ namespace Tinify.Unofficial.Tests.Integration
                 }));
 
             Assert.AreEqual($"/{dest}", result.Location?.LocalPath);
+        }
+
+        [Test]
+        public async Task Should_Convert_ToJpeg()
+        {
+            await using var imageResult = await optimized
+                .TransformImage(
+                    new TransformOperations(convert: new ConvertOperation(ConvertImageFormat.Jpeg, Color.Black)))
+                .ConfigureAwait(false);
+            await using var file = new TempFile();
+            await imageResult.ToFileAsync(file.Path);
+
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsJpeg);
+
+            /* width == 137 */
+            Assert.AreEqual(137, imageResult.Width);
+            Assert.AreEqual(137, metaData.GetImageWidth());
+
+            // Check that the content type says jpeg
+            Assert.AreEqual("image/jpeg", imageResult.ContentType);
+        }
+
+        [Test]
+        public async Task Should_Convert_ToWebP()
+        {
+            await using var imageResult = await optimized
+                .TransformImage(
+                    new TransformOperations(
+                        convert: new ConvertOperation(new[] {ConvertImageFormat.Jpeg, ConvertImageFormat.WebP},
+                            Color.Black)))
+                .ConfigureAwait(false);
+            await using var file = new TempFile();
+            await imageResult.ToFileAsync(file.Path);
+
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsWebP);
+
+            /* width == 137 */
+            Assert.AreEqual(137, imageResult.Width);
+            Assert.AreEqual(137, metaData.GetImageWidth());
+
+            // Check that the content type says webp
+            Assert.AreEqual("image/webp", imageResult.ContentType);
         }
     }
 }

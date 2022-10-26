@@ -14,7 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
         <PackageReference Include="NJsonSchema" Version="10.8.0" />
         <PackageReference Include="RichardSzalay.MockHttp" Version="6.0.0" />
         <PackageReference Include="NUnit" Version="3.13.3" />

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -159,56 +160,210 @@ namespace Tinify.Unofficial.Tests
         {
             await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
                 new ResizeOperation(ResizeType.Fit, 150, 100)));
-            
+
             // Transform operations should be sent as POST requests
             Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
-            
+
             // Verify that the last request body was sent as JSON
-            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
-            
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
             // Body of the last request should include "resize"
             Assert.IsTrue(Helper.LastBody.Contains("resize", StringComparison.Ordinal));
-            
+
             // Verify that the request matches the expected JSON Schema
             var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
             Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
         }
-        
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertSingleFormatNoBackground_FormatsRequest()
+        {
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(ConvertImageFormat.Jpeg)));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertMultiFormatNoBackground_FormatsRequest()
+        {
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(new[] {ConvertImageFormat.Jpeg, ConvertImageFormat.WebP})));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/webp", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertSingleFormatWithColorBackground_FormatsRequest()
+        {
+            // Color.Aqua is #00FFFF in HTML
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(ConvertImageFormat.Jpeg, Color.Aqua)));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("transform", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("background", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("#00FFFF", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertSingleFormatWithStringBackground_FormatsRequest()
+        {
+            // Color.Aqua is #00FFFF in HTML
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(ConvertImageFormat.Jpeg, "#00FFFF")));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("transform", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("background", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("#00FFFF", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertMultiFormatWithColorBackground_FormatsRequest()
+        {
+            // Color.Aqua is #00FFFF in HTML
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(new[] {ConvertImageFormat.Jpeg, ConvertImageFormat.WebP}, Color.Aqua)));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/webp", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("transform", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("background", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("#00FFFF", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformConvertMultiFormatWithStringBackground_FormatsRequest()
+        {
+            // Color.Aqua is #00FFFF in HTML
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                convert: new ConvertOperation(new[] {ConvertImageFormat.Jpeg, ConvertImageFormat.WebP}, "#00FFFF")));
+
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
+            // Body of the last request should include "convert"
+            Assert.IsTrue(Helper.LastBody.Contains("convert", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/jpeg", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("image/webp", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("transform", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("background", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("#00FFFF", StringComparison.Ordinal));
+
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
         [Test]
         public async Task OptimizedImage_TransformPreserve_FormatsRequest()
         {
             await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
-                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
-            
+                preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
+
             // Transform operations should be sent as POST requests
             Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
-            
+
             // Verify that the last request body was sent as JSON
-            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
-            
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
             // Body of the last request should include and "preserve" as well as copyright and creation
             Assert.IsTrue(Helper.LastBody.Contains("preserve", StringComparison.Ordinal));
             Assert.IsTrue(Helper.LastBody.Contains("copyright", StringComparison.Ordinal));
             Assert.IsTrue(Helper.LastBody.Contains("creation", StringComparison.Ordinal));
-            
+
             // Verify that the request matches the expected JSON Schema
             var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
             Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
         }
-        
+
         [Test]
         public async Task OptimizedImage_TransformResizeAndPreserve_FormatsRequest()
         {
             await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
-                new ResizeOperation(ResizeType.Fit, 150, 100),
-                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
-            
+                resize: new ResizeOperation(ResizeType.Fit, 150, 100),
+                preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
+
             // Transform operations should be sent as POST requests
             Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
-            
+
             // Verify that the last request body was sent as JSON
-            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
-            
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
             // Body of the last request should include both "resize" and "preserve" along with the associated settings
             Assert.IsTrue(Helper.LastBody.Contains("resize", StringComparison.Ordinal));
             Assert.IsTrue(Helper.LastBody.Contains("width", StringComparison.Ordinal));
@@ -216,7 +371,7 @@ namespace Tinify.Unofficial.Tests
             Assert.IsTrue(Helper.LastBody.Contains("preserve", StringComparison.Ordinal));
             Assert.IsTrue(Helper.LastBody.Contains("copyright", StringComparison.Ordinal));
             Assert.IsTrue(Helper.LastBody.Contains("creation", StringComparison.Ordinal));
-            
+
             // Verify that the request matches the expected JSON Schema
             var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
             Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
@@ -234,18 +389,19 @@ namespace Tinify.Unofficial.Tests
                 Headers = new CloudStoreHeaders("public, max-age=31536000"),
             };
             await using var imageResult =
-                await _optimizedImage.TransformImage(new TransformOperations(awsStoreOperation));
-            
+                await _optimizedImage.TransformImage(new TransformOperations(cloud: awsStoreOperation));
+
             // Transform operations should be sent as POST requests
             Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
-            
+
             // Verify that the last request body was sent as JSON
-            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
-            
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
             // Verify that the request matches the expected JSON Schema
             var schema = await JsonSchema.FromJsonAsync(Helper.AwsStoreSchema);
             Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
-            
+
             // Parse the schema to be sure it contains the proper service and SecretKey data
             using var document = JsonDocument.Parse(Helper.LastBody);
             var store = document.RootElement.GetProperty("store");
@@ -254,7 +410,7 @@ namespace Tinify.Unofficial.Tests
             var secretKey = store.GetProperty("aws_secret_access_key");
             Assert.AreEqual("MY_SECRET_ACCESS_KEY", secretKey.GetString());
         }
-        
+
         [Test]
         public async Task OptimizedImage_TransformStoreGCS_FormatsRequest()
         {
@@ -265,14 +421,15 @@ namespace Tinify.Unofficial.Tests
                 Headers = new CloudStoreHeaders("public, max-age=31536000"),
             };
             await using var imageResult =
-                await _optimizedImage.TransformImage(new TransformOperations(gcsOperation));
-            
+                await _optimizedImage.TransformImage(new TransformOperations(cloud: gcsOperation));
+
             // Transform operations should be sent as POST requests
             Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
-            
+
             // Verify that the last request body was sent as JSON
-            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
-            
+            Assert.AreEqual(MediaTypeNames.Application.Json,
+                Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+
             // Parse the schema to be sure it contains the proper service and SecretKey data
             using var document = JsonDocument.Parse(Helper.LastBody);
             var store = document.RootElement.GetProperty("store");
@@ -280,7 +437,7 @@ namespace Tinify.Unofficial.Tests
             Assert.AreEqual("gcs", service.GetString());
             var secretKey = store.GetProperty("gcp_access_token");
             Assert.AreEqual("MY_GCS_ACCESS_TOKEN", secretKey.GetString());
-            
+
             // Verify that the request matches the expected JSON Schema
             var schema = await JsonSchema.FromJsonAsync(Helper.GooglsCloudStoreSchema);
             Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
