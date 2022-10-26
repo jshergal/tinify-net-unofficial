@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
 using NJsonSchema;
-using NJsonSchema.Validation;
 using NUnit.Framework;
 using RichardSzalay.MockHttp;
 
