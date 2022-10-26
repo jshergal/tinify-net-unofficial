@@ -230,7 +230,7 @@ namespace Tinify.Unofficial.Tests.Integration
 
             var dest = _awsBucket + "/my-images/voormedia.optimized.png";
             await using var result = await optimized.TransformImage(new TransformOperations(
-                new AwsCloudStoreData()
+                new AwsCloudStoreOperation()
                 {
                     Region = _awsRegion,
                     AwsAccessKeyId = _awsAccessId,

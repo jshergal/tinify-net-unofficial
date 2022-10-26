@@ -1,0 +1,56 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "resize": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "width",
+        "height"
+      ]
+    },
+    "convert": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "background"
+      ]
+    },
+    "preserve": {
+      "type": "array",
+      "maxItems" : 3,
+      "items": 
+        {
+          "type": "string"
+        }
+    }
+  },
+  "required": [ ]
+}

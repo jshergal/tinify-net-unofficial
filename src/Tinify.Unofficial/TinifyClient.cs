@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,74 +14,30 @@ using Tinify.Unofficial.Internal;
 
 namespace Tinify.Unofficial
 {
-    #if NETSTANDARD2_1
+#if NETSTANDARD2_1
     using SocketsHttpHandler = StandardSocketsHttpHandler;
-    #endif
+#endif
 
     public sealed class TinifyClient
     {
-        internal sealed record ErrorData([property: JsonPropertyName("message")]
-            string Message, [property: JsonPropertyName("error")] string Error);
+        private const short RetryCount = 1;
 
         private static readonly Uri ShrinkUri = new("/shrink", UriKind.Relative);
-        
+
         private static readonly Uri ApiEndpoint = new("https://api.tinify.com");
 
-        private const short RetryCount = 1;
-        public static ushort RetryDelay { get; internal set; }= 500;
-
         private static volatile int _compressionCount;
-        public static int CompressionCount => _compressionCount;
 
         private static readonly SocketsHttpHandler SocketHandler = new()
         {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
         };
 
         private static readonly Dictionary<string, HttpClient> HttpClients = new();
 
         private static readonly object Lock = new();
-        
-        /// <summary>
-        /// Clears out and disposes of all HttpClients held by the Tinify client.
-        /// </summary>
-        internal static void ClearClients()
-        {
-            lock (Lock)
-            {
-                foreach (var pair in HttpClients)
-                {
-                    pair.Value.Dispose();
-                }
-                HttpClients.Clear();
-            }
-        }
-        
+
         private readonly HttpClient _client;
-
-        private static HttpClient GetClient(string key, HttpMessageHandler handler)
-        {
-            var tempHandler = handler ?? SocketHandler;
-            var clientKey = key + tempHandler;
-            lock (Lock)
-            {
-                if (HttpClients.TryGetValue(clientKey, out var client)) return client;
-
-                client = new HttpClient(tempHandler, false)
-                {
-                    BaseAddress = ApiEndpoint,
-                    Timeout = Timeout.InfiniteTimeSpan,
-                };
-
-                var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}"));
-                client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
-                client.DefaultRequestHeaders.Add("User-Agent", Platform.UserAgent);
-
-                HttpClients.Add(clientKey, client);
-
-                return client;
-            }
-        }
 
         /// <summary>
         /// Creates a new Client object for accessing the Tinify API
@@ -95,6 +52,45 @@ namespace Tinify.Unofficial
                 throw new ArgumentNullException(nameof(key), "You must provide a Tinify API key.");
 
             _client = GetClient(key, handler);
+        }
+
+        public static ushort RetryDelay { get; internal set; } = 500;
+        public static int CompressionCount => _compressionCount;
+
+        /// <summary>
+        /// Clears out and disposes of all HttpClients held by the Tinify client.
+        /// </summary>
+        internal static void ClearClients()
+        {
+            lock (Lock)
+            {
+                foreach (var pair in HttpClients) pair.Value.Dispose();
+                HttpClients.Clear();
+            }
+        }
+
+        private static HttpClient GetClient(string key, HttpMessageHandler handler)
+        {
+            var tempHandler = handler ?? SocketHandler;
+            var clientKey = key + tempHandler;
+            lock (Lock)
+            {
+                if (HttpClients.TryGetValue(clientKey, out var client)) return client;
+
+                client = new HttpClient(tempHandler, false)
+                {
+                    BaseAddress = ApiEndpoint,
+                    Timeout = Timeout.InfiniteTimeSpan
+                };
+
+                var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{key}"));
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
+                client.DefaultRequestHeaders.Add("User-Agent", Platform.UserAgent);
+
+                HttpClients.Add(clientKey, client);
+
+                return client;
+            }
         }
 
         public async Task<OptimizedImage> ShrinkFromFile(string path)
@@ -113,37 +109,34 @@ namespace Tinify.Unofficial
         public async Task<OptimizedImage> ShrinkFromUrl(string url)
         {
             var body = new StringContent($"{{\"source\":{{\"url\":\"{url}\"}}}}",
-                Encoding.UTF8, "application/json");
-            
+                Encoding.UTF8, MediaTypeNames.Application.Json);
+
             var response = await Request(HttpMethod.Post, ShrinkUri, body).ConfigureAwait(false);
             return await OptimizedImage.CreateAsync(response, this, true);
         }
 
-        internal async Task<Result> GetResult(OptimizedImage optimizedImage, TransformOperations operations = null)
+        internal async Task<ImageResult> GetResult(OptimizedImage optimizedImage, TransformOperations operations = null)
         {
             using var response = operations is null
                 ? await Request(HttpMethod.Get, optimizedImage.Location).ConfigureAwait(false)
                 : await Request(HttpMethod.Post, optimizedImage.Location, operations)
                     .ConfigureAwait(false);
 
-            return await Result.Create(response, true).ConfigureAwait(false);
+            return await ImageResult.Create(response, true).ConfigureAwait(false);
         }
 
         private async Task<HttpResponseMessage> Request(HttpMethod method, Uri url, TransformOperations options)
         {
             var json = JsonSerializer.Serialize(options, TinifyConstants.SerializerOptions);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
             return await Request(method, url, content);
         }
-        
+
         private async Task<HttpResponseMessage> Request(HttpMethod method, Uri url, HttpContent body = null)
         {
             for (var retries = RetryCount; retries >= 0; retries--)
             {
-                if (retries < RetryCount)
-                {
-                    await Task.Delay(RetryDelay);
-                }
+                if (retries < RetryCount) await Task.Delay(RetryDelay);
 
                 var request = new HttpRequestMessage(method, url)
                 {
@@ -164,10 +157,7 @@ namespace Tinify.Unofficial
                 {
                     if (retries > 0) continue;
 
-                    if (err.InnerException != null)
-                    {
-                        err = err.InnerException;
-                    }
+                    if (err.InnerException != null) err = err.InnerException;
 
                     throw new ConnectionException("Error while connecting: " + err.Message, err);
                 }
@@ -176,17 +166,12 @@ namespace Tinify.Unofficial
                 {
                     var compressionCount = response.Headers.GetValues("Compression-Count").FirstOrDefault();
                     if (int.TryParse(compressionCount, out var parsed))
-                    {
                         Interlocked.Exchange(ref _compressionCount, parsed);
-                    }
                 }
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return response;
-                }
+                if (response.IsSuccessStatusCode) return response;
 
-                if (retries > 0 && (uint)response.StatusCode >= 500) continue;
+                if (retries > 0 && (uint) response.StatusCode >= 500) continue;
 
                 ErrorData data;
                 try
@@ -202,12 +187,13 @@ namespace Tinify.Unofficial
                         "ParseError"
                     );
                 }
+
                 throw TinifyException.Create(data.Message, data.Error, response.StatusCode);
             }
 
             return null;
         }
-        
+
         public async Task<bool> Validate()
         {
             try
@@ -222,7 +208,11 @@ namespace Tinify.Unofficial
             {
                 return true;
             }
+
             return false;
         }
+
+        internal sealed record ErrorData([property: JsonPropertyName("message")]
+            string Message, [property: JsonPropertyName("error")] string Error);
     }
 }

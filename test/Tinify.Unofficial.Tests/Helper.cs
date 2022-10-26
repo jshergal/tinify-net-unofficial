@@ -14,12 +14,23 @@ namespace Tinify.Unofficial.Tests
     {
         public const string HttpsExampleComTestJpg = "https://example.com/test.jpg";
         public const string DefaultKey = "key";
-        
+
         public static readonly byte[] MockPngImageBytes = Encoding.UTF8.GetBytes("png file");
 
         public static readonly MockHttpMessageHandler MockHandler = new();
         private static HttpRequestMessage _last;
 
+        private static readonly string ExamplesBasePath =
+            $"{AppContext.BaseDirectory}{Path.DirectorySeparatorChar}examples";
+
+        public static readonly string AwsStoreSchema = File.ReadAllText(Path.Combine(ExamplesBasePath, "AwsStoreSchema.txt"));
+
+        public static readonly string GooglsCloudStoreSchema =
+            File.ReadAllText(Path.Combine(ExamplesBasePath, "GoogleCloudStoreSchema.txt"));
+
+        public static readonly string TinifyTransformSchema =
+            File.ReadAllText(Path.Combine(ExamplesBasePath, "TinifyTransformSchema.txt"));
+        
         public static HttpRequestMessage LastRequest
         {
             get => _last;
@@ -29,7 +40,9 @@ namespace Tinify.Unofficial.Tests
                 _last = value;
             }
         }
-        public static string LastBody;
+
+        public static string LastBody { get; set; }
+        public static HttpMethod LastMethod { get; set; }
 
         public static void ResetMockHandler()
         {
@@ -110,19 +123,12 @@ namespace Tinify.Unofficial.Tests
         public static T GetFieldValue<T>(this object obj, string name)
         {
             // Set the flags so that private and public fields from instances will be found
-            var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-            var field = obj.GetType().GetField(name, bindingFlags);
+            const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var field = obj.GetField(name, bindingFlags);
             return (T) field?.GetValue(obj);
         }
-            
-        // Helper method added due to a behavior change in .Net 6.0 where instead of returning null,
-        // HttpContent will be of type EmptyContentType
-#if NET5_0_OR_GREATER
-        private static readonly System.Type EmptyContentType = typeof(HttpContent).Assembly.GetType("System.Net.Http.EmptyContent");
 
-        public static void AssertEmptyResponseContent(HttpContent content) => Assert.IsInstanceOf(EmptyContentType, content);
-#else
-        public static void AssertEmptyResponseContent(HttpContent content) => Assert.AreEqual(null, content);
-#endif
+        public static FieldInfo GetField(this object obj, string name, BindingFlags flags) =>
+            obj.GetType().GetField(name, flags);
     }
 }

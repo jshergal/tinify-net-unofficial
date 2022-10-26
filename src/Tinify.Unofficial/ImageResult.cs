@@ -9,11 +9,11 @@ using IMemoryOwnerExtensions = CommunityToolkit.HighPerformance.IMemoryOwnerExte
 #nullable enable
 namespace Tinify.Unofficial
 {
-    public sealed class Result : IDisposable, IAsyncDisposable
+    public sealed class ImageResult : IDisposable, IAsyncDisposable
     {
         private MemoryOwner<byte>? _data;
 
-        private Result()
+        private ImageResult()
         {
         }
 
@@ -31,7 +31,7 @@ namespace Tinify.Unofficial
 
         public void Dispose() => DisposeCore();
 
-        internal static async Task<Result> Create(HttpResponseMessage response, bool disposeResponse = false)
+        internal static async Task<ImageResult> Create(HttpResponseMessage response, bool disposeResponse = false)
         {
             try
             {
@@ -39,7 +39,7 @@ namespace Tinify.Unofficial
                 var content = response.Content;
                 var contentHeaders = content?.Headers;
                 var contentLength = (int?) contentHeaders?.ContentLength;
-                return new Result()
+                return new ImageResult()
                 {
                     Width = GetIntValueFromHeader(header, "Image-Width"),
                     Height = GetIntValueFromHeader(header, "Image-Height"),

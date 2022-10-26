@@ -16,6 +16,7 @@
 		<PackageProjectUrl>https://github.com/jshergal/tinify-net-unofficial</PackageProjectUrl>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../CHANGES.md"))</PackageReleaseNotes>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/jshergal/tinify-net-unofficial</RepositoryUrl>
 		<LangVersion>9.0</LangVersion>
@@ -32,8 +33,9 @@
 
 	<ItemGroup>
 		<None Remove=".DS_Store" />
-		<None Include="images/tinifyicon.unofficial.png" Pack="true" PackagePath="\" />
-		<None Include="../../LICENSE" Pack="true" Visible="false" PackagePath="" />
+		<None Include="images/tinifyicon.unofficial.png" Pack="true" PackagePath="/" />
+		<None Include="../../LICENSE" Pack="true" Visible="false" PackagePath="/" />
+		<None Include="../../README.md" Pack="true" PackagePath="/" />
 	</ItemGroup>
 
 	<ItemGroup>

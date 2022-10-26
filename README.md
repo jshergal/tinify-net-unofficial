@@ -26,7 +26,7 @@ await using var optimizedImage = await client.ShrinkFromFile("unoptimized.png");
 await optimizedImage.ToFileAsync("optimized.png");
 ```
 
-To perform other transform operations, simply call the `Transform` method
+To perform other transform operations, simply call the `TransformImage` method
 on the optimized image
 
 ```csharp
@@ -70,23 +70,23 @@ transformedImage.CopyDataToBuffer(bufferTransformed);
 ```
 
 __*Note:*__  
-Because both `OptimizedImage` and `Result` objects maintain and internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
+Because both `OptimizedImage` and `Result` objects maintain an internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
 Both objects implement both `IDisposable` and `IAsyncDisposable`
 
 ## Running tests
 
 ```
 dotnet restore
-dotnet test test/Tinify.Tests
+dotnet test test/Tinify.Unofficial.Tests
 ```
 
 ### Integration tests
 
 ```
 dotnet restore
-TINIFY_KEY=$YOUR_API_KEY dotnet test test/Tinify.Tests.Integration
+TINIFY_KEY=$YOUR_API_KEY dotnet test test/Tinify.Unofficial.Tests.Integration
 ```
-Or add a `.env` file to the `/test/Tinify.Tests.Integration` directory in the format
+Or add a `.env` file to the `/test/Tinify.Unofficial.Tests.Integration` directory in the format
 ```
 TINIFY_KEY=<YOUR_API_KEY>
 ```

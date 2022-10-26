@@ -2,14 +2,12 @@
 
 namespace Tinify.Unofficial
 {
-#pragma warning disable SYSLIB1037
-    public sealed record GoogleCloudStoreData : CloudStoreData
+    public sealed record GoogleCloudStoreOperation : CloudStoreOperation
     {
-        [JsonPropertyName("service")] public string Service { get; } = "gcs";
+        [JsonPropertyName("service")] public override string Service { get; } = "gcs";
 
         [JsonPropertyName("gcp_access_token")] public string GcpAccessToken { get; init; }
 
         [JsonPropertyName("path")] public string Path { get; init; }
     }
-#pragma warning restore SYSLIB1037
 }

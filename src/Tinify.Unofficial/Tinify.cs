@@ -9,7 +9,7 @@ namespace Tinify.Unofficial
 {
     internal static class TinifyConstants
     {
-        internal static JsonSerializerOptions SerializerOptions = new()
+        internal static readonly JsonSerializerOptions SerializerOptions = new()
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };

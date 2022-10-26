@@ -901,7 +901,7 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueuShrinkAndStore();
 
             var imageOperations = new TransformOperations(
-                new AwsCloudStoreData
+                new AwsCloudStoreOperation
                 {
                     AwsAccessKeyId = "AccessKeyId",
                     AwsSecretAccessKey = "SecretAccessKey",
@@ -923,7 +923,7 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueuShrinkAndStore();
 
             var imageOperations = new TransformOperations(
-                new AwsCloudStoreData
+                new AwsCloudStoreOperation
                 {
                     AwsAccessKeyId = "AccessKeyId",
                     AwsSecretAccessKey = "SecretAccessKey",

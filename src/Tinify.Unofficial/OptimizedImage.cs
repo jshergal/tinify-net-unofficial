@@ -10,16 +10,24 @@ namespace Tinify.Unofficial
 {
     public sealed class OptimizedImage : IDisposable, IAsyncDisposable
     {
+        private TinifyClient _client = null!;
+
+        private bool _disposed;
+
+        private ImageResult? _result;
+
+        private OptimizedImage()
+        {
+        }
+
         public Uri? Location { get; private init; }
         public int? ImageSize { get; private init; }
 
         public string? ImageType { get; private init; }
 
-        private Result? _result;
+        public async ValueTask DisposeAsync() => await Task.Run(DisposeCore).ConfigureAwait(false);
 
-        private TinifyClient _client = null!;
-
-        private bool _disposed;
+        public void Dispose() => DisposeCore();
 
         public static async Task<OptimizedImage> CreateAsync(HttpResponseMessage response, TinifyClient client,
             bool disposeResponse = false)
@@ -39,10 +47,6 @@ namespace Tinify.Unofficial
             {
                 if (disposeResponse) response.Dispose();
             }
-        }
-
-        private OptimizedImage()
-        {
         }
 
         private static async Task<(string? imageType, int? imageSize)> GetImageDataFromResponse(
@@ -74,7 +78,7 @@ namespace Tinify.Unofficial
             return (imageType, imageSize);
         }
 
-        private async ValueTask<Result> GetResult()
+        private async ValueTask<ImageResult> GetResult()
         {
             if (_result is not null) return _result;
 
@@ -108,12 +112,8 @@ namespace Tinify.Unofficial
             result.CopyToBuffer(buffer.Span);
         }
 
-        public async Task<Result> TransformImage(TransformOperations operations) =>
+        public async Task<ImageResult> TransformImage(TransformOperations operations) =>
             await _client.GetResult(this, operations).ConfigureAwait(false);
-
-        public void Dispose() => DisposeCore();
-
-        public async ValueTask DisposeAsync() => await Task.Run(DisposeCore).ConfigureAwait(false);
 
         private void DisposeCore()
         {

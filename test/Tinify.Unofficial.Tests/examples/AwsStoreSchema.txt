@@ -1,0 +1,47 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "aws_access_key_id": {
+          "type": "string"
+        },
+        "aws_secret_access_key": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "properties": {
+            "Cache-Control": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Cache-Control"
+          ]
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "service",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "region",
+        "path"
+      ]
+    }
+  },
+  "required": [
+    "store"
+  ]
+}

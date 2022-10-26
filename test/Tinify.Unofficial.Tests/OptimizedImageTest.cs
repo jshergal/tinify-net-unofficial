@@ -2,12 +2,15 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Mime;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
+using NJsonSchema;
+using NJsonSchema.Validation;
 using NUnit.Framework;
 using RichardSzalay.MockHttp;
 
@@ -23,12 +26,14 @@ namespace Tinify.Unofficial.Tests
         private readonly byte[] _compressedImage = Convert.FromBase64String(CompressedImageDataBase64);
         private TinifyClient _client;
         private OptimizedImage _optimizedImage;
+        private int _compressionCount;
 
         [OneTimeSetUp]
         public void Init()
         {
             TinifyClient.ClearClients();
             _client = new TinifyClient(Helper.DefaultKey, Helper.MockHandler);
+            _compressionCount = 1;
         }
 
         [SetUp]
@@ -43,10 +48,10 @@ namespace Tinify.Unofficial.Tests
             {
                 var res = new HttpResponseMessage(HttpStatusCode.Created)
                 {
-                    Content = new StringContent(shrinkBodyResponse, Encoding.UTF8, "application/json"),
+                    Content = new StringContent(shrinkBodyResponse, Encoding.UTF8, MediaTypeNames.Application.Json),
                 };
                 res.Headers.Add("Location", CompressedImageLocation);
-                res.Headers.Add("Compression-Count", "12");
+                res.Headers.Add("Compression-Count", (_compressionCount++).ToString());
                 res.Content.Headers.Add("Content-Length", shrinkBodyResponse.Length.ToString());
                 res.Headers.Date = DateTimeOffset.Now;
 
@@ -56,8 +61,11 @@ namespace Tinify.Unofficial.Tests
             Helper.MockHandler.Expect(CompressedImageLocation).Respond(req =>
             {
                 Helper.LastRequest = req;
+                Helper.LastMethod = req.Method;
 
-                if (req.Content != null)
+                if (req.Method == HttpMethod.Post) ++_compressionCount;
+
+                if (req.Content is not null)
                 {
                     Helper.LastBody = req.Content.ReadAsStringAsync().Result;
                 }
@@ -71,7 +79,7 @@ namespace Tinify.Unofficial.Tests
                 res.Content.Headers.Add("Image-Width", "137");
                 res.Content.Headers.Add("Image-Height", "21");
                 res.Headers.Date = DateTimeOffset.Now;
-                res.Headers.Add("Compression-Count", "12");
+                res.Headers.Add("Compression-Count", _compressionCount.ToString());
                 res.Content.Headers.ContentLength = _compressedImage.Length;
 
                 return res;
@@ -124,18 +132,159 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task OptimizedImage_BuffersResult()
         {
-            var resultValue = _optimizedImage.GetFieldValue<Result>("_result");
+            var resultField = _optimizedImage.GetField("_result", BindingFlags.NonPublic | BindingFlags.Instance);
+            var resultValue = (ImageResult) resultField?.GetValue(_optimizedImage);
             Assert.IsNull(resultValue);
+
+            // Calling any of the To methods on OptimizedImage should force the image data to be buffered within the object
             using var dest = MemoryOwner<byte>.Allocate(_compressedImage.Length, AllocationMode.Clear);
             await _optimizedImage.CopyToBufferAsync(dest.Memory).ConfigureAwait(false);
+            Assert.IsTrue(
+                dest.Span.SequenceEqual(_compressedImage)
+            );
 
-            resultValue = _optimizedImage.GetFieldValue<Result>("_result");
+            // Verify that the OptimizedImage is now holding the result value
+            resultValue = (ImageResult) resultField?.GetValue(_optimizedImage);
             Assert.IsNotNull(resultValue);
+
+            // Sanity check, copy the buffered result and verify that it is also correct
             dest.Span.Clear();
             resultValue.CopyToBuffer(dest.Span);
             Assert.IsTrue(
                 dest.Span.SequenceEqual(_compressedImage)
             );
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformResize_FormatsRequest()
+        {
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                new ResizeOperation(ResizeType.Fit, 150, 100)));
+            
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+            
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+            
+            // Body of the last request should include "resize"
+            Assert.IsTrue(Helper.LastBody.Contains("resize", StringComparison.Ordinal));
+            
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+        
+        [Test]
+        public async Task OptimizedImage_TransformPreserve_FormatsRequest()
+        {
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
+            
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+            
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+            
+            // Body of the last request should include and "preserve" as well as copyright and creation
+            Assert.IsTrue(Helper.LastBody.Contains("preserve", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("copyright", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("creation", StringComparison.Ordinal));
+            
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+        
+        [Test]
+        public async Task OptimizedImage_TransformResizeAndPreserve_FormatsRequest()
+        {
+            await using var imageResult = await _optimizedImage.TransformImage(new TransformOperations(
+                new ResizeOperation(ResizeType.Fit, 150, 100),
+                new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)));
+            
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+            
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+            
+            // Body of the last request should include both "resize" and "preserve" along with the associated settings
+            Assert.IsTrue(Helper.LastBody.Contains("resize", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("width", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("height", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("preserve", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("copyright", StringComparison.Ordinal));
+            Assert.IsTrue(Helper.LastBody.Contains("creation", StringComparison.Ordinal));
+            
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.TinifyTransformSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+        }
+
+        [Test]
+        public async Task OptimizedImage_TransformStoreAws_FormatsRequest()
+        {
+            var awsStoreOperation = new AwsCloudStoreOperation()
+            {
+                AwsAccessKeyId = "MY_ACCESS_KEY_ID",
+                AwsSecretAccessKey = "MY_SECRET_ACCESS_KEY",
+                Path = "my-bucket/my-images/stored.image.jpg",
+                Region = "us-east-1",
+                Headers = new CloudStoreHeaders("public, max-age=31536000"),
+            };
+            await using var imageResult =
+                await _optimizedImage.TransformImage(new TransformOperations(awsStoreOperation));
+            
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+            
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+            
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.AwsStoreSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
+            
+            // Parse the schema to be sure it contains the proper service and SecretKey data
+            using var document = JsonDocument.Parse(Helper.LastBody);
+            var store = document.RootElement.GetProperty("store");
+            var service = store.GetProperty("service");
+            Assert.AreEqual("s3", service.GetString());
+            var secretKey = store.GetProperty("aws_secret_access_key");
+            Assert.AreEqual("MY_SECRET_ACCESS_KEY", secretKey.GetString());
+        }
+        
+        [Test]
+        public async Task OptimizedImage_TransformStoreGCS_FormatsRequest()
+        {
+            var gcsOperation = new GoogleCloudStoreOperation()
+            {
+                GcpAccessToken = "MY_GCS_ACCESS_TOKEN",
+                Path = "my-bucket/my-images/stored.image.jpg",
+                Headers = new CloudStoreHeaders("public, max-age=31536000"),
+            };
+            await using var imageResult =
+                await _optimizedImage.TransformImage(new TransformOperations(gcsOperation));
+            
+            // Transform operations should be sent as POST requests
+            Assert.AreEqual(HttpMethod.Post, Helper.LastMethod);
+            
+            // Verify that the last request body was sent as JSON
+            Assert.AreEqual(MediaTypeNames.Application.Json, Helper.LastRequest!.Content!.Headers!.ContentType!.MediaType);
+            
+            // Parse the schema to be sure it contains the proper service and SecretKey data
+            using var document = JsonDocument.Parse(Helper.LastBody);
+            var store = document.RootElement.GetProperty("store");
+            var service = store.GetProperty("service");
+            Assert.AreEqual("gcs", service.GetString());
+            var secretKey = store.GetProperty("gcp_access_token");
+            Assert.AreEqual("MY_GCS_ACCESS_TOKEN", secretKey.GetString());
+            
+            // Verify that the request matches the expected JSON Schema
+            var schema = await JsonSchema.FromJsonAsync(Helper.GooglsCloudStoreSchema);
+            Assert.AreEqual(0, schema.Validate(Helper.LastBody).Count);
         }
     }
 }

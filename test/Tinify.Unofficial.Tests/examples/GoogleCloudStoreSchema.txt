@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "gcp_access_token": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "properties": {
+            "Cache-Control": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Cache-Control"
+          ]
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "service",
+        "gcp_access_token",
+        "path"
+      ]
+    }
+  },
+  "required": [
+    "store"
+  ]
+}
