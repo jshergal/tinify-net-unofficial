@@ -40,7 +40,7 @@ await using var result = await optimized.TransformImage(transformOperations);
 await result.ToFileAsync("optimized_and_transformed.jpg");
 ```
 
-You can save both `OptimizedImage` and `Result` objects to a file, to a stream, to a buffer or pass in a preallocated buffer and copy the data directly to the buffer
+You can save both `OptimizedImage` and `ImageResult` objects to a file, to a stream, to a buffer or pass in a preallocated buffer and copy the data directly to the buffer
 ```csharp
 await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
 await using var transformedImage =
@@ -50,7 +50,7 @@ await using var transformedImage =
                                     
 var optimizedBuffer = await optimizedImage.ToBufferAsync();
 
-// Note the Result object already holds an internal buffer
+// Note the ImageResult object already holds an internal buffer
 // with the image data and so will just return a copy synchronously
 var transformedBuffer = transformedImage.ToBuffer();
 
@@ -63,14 +63,14 @@ await transformedImage.ToStreamAsync(msTransformed);
 var bufferOptimized = new byte[optimizedImage.ImageSize];
 await optimizedImage.CopyToBufferAsync(bufferOptimized);
 
-// Note the Result object already holds an internal buffer
+// Note the ImageResult object already holds an internal buffer
 // with the image data and so will just copy the data synchronously
 var bufferTransformed = new byte[transformedImage.DataLength];
 transformedImage.CopyDataToBuffer(bufferTransformed);
 ```
 
 __*Note:*__  
-Because both `OptimizedImage` and `Result` objects maintain an internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
+Because both `OptimizedImage` and `ImageResult` objects maintain an internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
 Both objects implement both `IDisposable` and `IAsyncDisposable`
 
 ## Running tests
