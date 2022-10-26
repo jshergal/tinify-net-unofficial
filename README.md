@@ -6,7 +6,8 @@
 
 [Official Tinify GitHub repo](https://github.com/tinify/tinify-net)
 
-.NET client for the Tinify API, used for [TinyPNG](https://tinypng.com) and [TinyJPG](https://tinyjpg.com). Tinify compresses your images intelligently. Read more at [http://tinify.com](http://tinify.com).
+.NET client for the Tinify API, used for [TinyPNG](https://tinypng.com) and [TinyJPG](https://tinyjpg.com). Tinify
+compresses your images intelligently. Read more at [http://tinify.com](http://tinify.com).
 
 ## Installation
 
@@ -40,7 +41,9 @@ await using var result = await optimized.TransformImage(transformOperations);
 await result.ToFileAsync("optimized_and_transformed.jpg");
 ```
 
-You can save both `OptimizedImage` and `ImageResult` objects to a file, to a stream, to a buffer or pass in a preallocated buffer and copy the data directly to the buffer
+You can save both `OptimizedImage` and `ImageResult` objects to a file, to a stream, to a buffer or pass in a
+preallocated buffer and copy the data directly to the buffer
+
 ```csharp
 await using var optimizedImage = await client.ShrinkFromFile("unoptimized.jpg");
 await using var transformedImage =
@@ -70,8 +73,11 @@ transformedImage.CopyDataToBuffer(bufferTransformed);
 ```
 
 __*Note:*__  
-Because both `OptimizedImage` and `ImageResult` objects maintain an internal buffer of the image data, you should be sure to call their `Dispose` methods or wrap them in a using block/statement.
-Both objects implement both `IDisposable` and `IAsyncDisposable`
+Because both `OptimizedImage` and `ImageResult` objects maintain an internal buffer
+of the image data, which has been rented from the [ArrayPool](https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1),
+you should be sure to `Dispose` of them so that the buffer is returned to the pool.
+Both objects implement both `IDisposable` and `IAsyncDisposable` so that they
+can be easily wrapped in either using blocks or statements.
 
 ## Running tests
 
@@ -86,7 +92,9 @@ dotnet test test/Tinify.Unofficial.Tests
 dotnet restore
 TINIFY_KEY=$YOUR_API_KEY dotnet test test/Tinify.Unofficial.Tests.Integration
 ```
+
 Or add a `.env` file to the `/test/Tinify.Unofficial.Tests.Integration` directory in the format
+
 ```
 TINIFY_KEY=<YOUR_API_KEY>
 ```
