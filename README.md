@@ -81,6 +81,7 @@ var client = new TinifyClient("YOUR_API_KEY",
 * `ShrinkFromFileAsync`
 * `ShrinkFromBufferAsync`
 * `ShrinkFromUrlAsync`
+* `ShrinkFromStreamAsync`
 
 #### Example
 
