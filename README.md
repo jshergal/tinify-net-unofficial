@@ -139,8 +139,8 @@ Because both `OptimizedImage` and `ImageResult` objects maintain an internal buf
 of the image data, which has been rented from
 the [ArrayPool](https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1),
 you should be sure to `Dispose` of them so that the buffer is returned to the pool.
-Both objects implement both `IDisposable` and `IAsyncDisposable` so that they
-can be easily wrapped in either using blocks or statements.
+Both objects implement `IDisposable` and `IAsyncDisposable` so that they
+can be easily wrapped in using blocks or statements.
 
 ### Saving the optimized or transformed image
 
