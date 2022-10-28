@@ -12,3 +12,4 @@
 * Minor breaking change, renamed `ShrinkFrom...` methods to `ShrinkFrom...Async`
 to be consistent with other asynchronous method signatures
 * Updated documentation with more explanation and usage examples
+* Added new `ShrinkFromStreamAsync` method

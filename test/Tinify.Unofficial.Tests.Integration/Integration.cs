@@ -28,7 +28,7 @@ namespace Tinify.Unofficial.Tests.Integration
         private readonly IReadOnlyList<MetadataDirectory> _metaDataDirectories;
 
         private string _imageFileType;
-        public string ImageFileType => _imageFileType ??= GetImageFileType();
+        private string ImageFileType => _imageFileType ??= GetImageFileType();
 
         public ImageMetadata(string fileName)
         {
@@ -90,9 +90,12 @@ namespace Tinify.Unofficial.Tests.Integration
     [TestFixture]
     public class Client_Integration
     {
-        private static OptimizedImage optimized;
+        private static OptimizedImage _optimized;
 
         private const string VoormediaCopyright = "Copyright Voormedia";
+
+        private static readonly string _unoptimizedFilePath =
+            Path.Combine(AppContext.BaseDirectory, "examples", "voormedia.png");
 
         private static TinifyClient _client;
 
@@ -114,13 +117,33 @@ namespace Tinify.Unofficial.Tests.Integration
             _awsRegion = Environment.GetEnvironmentVariable("AWS_REGION");
             _awsBucket = Environment.GetEnvironmentVariable("AWS_BUCKET");
 
-            var unoptimizedPath = Path.Combine(AppContext.BaseDirectory, "examples", "voormedia.png");
-            optimized = _client.ShrinkFromFileAsync(unoptimizedPath).Result;
+            _optimized = _client.ShrinkFromFileAsync(_unoptimizedFilePath).Result;
         }
 
         [Test]
         public async Task Should_Compress_FromFile()
         {
+            await using var file = new TempFile();
+            await _optimized.ToFileAsync(file.Path).ConfigureAwait(false);
+
+            var size = new FileInfo(file.Path).Length;
+            Assert.Greater(size, 1000);
+            Assert.Less(size, 1500);
+
+            var metaData = new ImageMetadata(file.Path);
+            Assert.That(metaData.IsPng);
+
+            /* width == 137 */
+            Assert.AreEqual(137, metaData.GetImageWidth());
+            Assert.IsFalse(metaData.ContainsStringInXmpData(VoormediaCopyright));
+        }
+        
+        [Test]
+        public async Task Should_Compress_FromStream()
+        {
+            await using var optimized = await _client.ShrinkFromStreamAsync(File.OpenRead(_unoptimizedFilePath))
+                .ConfigureAwait(false);
+            
             await using var file = new TempFile();
             await optimized.ToFileAsync(file.Path).ConfigureAwait(false);
 
@@ -161,7 +184,7 @@ namespace Tinify.Unofficial.Tests.Integration
         [Test]
         public async Task Should_Resize()
         {
-            await using var result = await optimized.TransformImage(new TransformOperations(
+            await using var result = await _optimized.TransformImage(new TransformOperations(
                 new ResizeOperation(ResizeType.Fit, 50, 20)));
 
             await using var file = new TempFile();
@@ -182,7 +205,7 @@ namespace Tinify.Unofficial.Tests.Integration
         public async Task Should_PreserveMetadata()
         {
             await using var file = new TempFile();
-            await using var result = await optimized.TransformImage(
+            await using var result = await _optimized.TransformImage(
                     new TransformOperations(
                         preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation)))
                 .ConfigureAwait(false);
@@ -206,7 +229,7 @@ namespace Tinify.Unofficial.Tests.Integration
             await using var file = new TempFile();
             var resizeOptions = new ResizeOperation(ResizeType.Fit, 50, 20);
             var preserveOptions = new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Creation);
-            await using var result = await optimized
+            await using var result = await _optimized
                 .TransformImage(new TransformOperations(resize: resizeOptions, preserve: preserveOptions))
                 .ConfigureAwait(false);
             await result.ToFileAsync(file.Path);
@@ -230,7 +253,7 @@ namespace Tinify.Unofficial.Tests.Integration
                 string.IsNullOrWhiteSpace(_awsRegion) || string.IsNullOrWhiteSpace(_awsBucket)) return;
 
             var dest = _awsBucket + "/my-images/voormedia.optimized.png";
-            await using var result = await optimized.TransformImage(new TransformOperations(
+            await using var result = await _optimized.TransformImage(new TransformOperations(
                 cloud: new AwsCloudStoreOperation()
                 {
                     Region = _awsRegion,
@@ -245,7 +268,7 @@ namespace Tinify.Unofficial.Tests.Integration
         [Test]
         public async Task Should_Convert_ToJpeg()
         {
-            await using var imageResult = await optimized
+            await using var imageResult = await _optimized
                 .TransformImage(
                     new TransformOperations(convert: new ConvertOperation(ConvertImageFormat.Jpeg, Color.Black)))
                 .ConfigureAwait(false);
@@ -266,7 +289,7 @@ namespace Tinify.Unofficial.Tests.Integration
         [Test]
         public async Task Should_Convert_ToWebP()
         {
-            await using var imageResult = await optimized
+            await using var imageResult = await _optimized
                 .TransformImage(
                     new TransformOperations(
                         convert: new ConvertOperation(new[] {ConvertImageFormat.Jpeg, ConvertImageFormat.WebP},
