@@ -18,6 +18,11 @@ Install-Package Tinify.Unofficial
 ```
 
 ### :boom: Minor Breaking Change between v1.0.2 and v1.0.3
+The `Shrink` methods on the `TinifyClient` were renamed:
+* `ShrinkFromFile`&emsp;&ensp;=>&nbsp;`ShrinkFromFileAsync`
+* `ShrinkFromBuffer`&ensp;=>&nbsp;`ShrinkFromBufferAsync`
+* `ShrinkFromUrl`&emsp;&emsp;=>&nbsp;`ShrinkFromUrlAsync`
+
 ## Usage
 
 ### Initialize the TinifyClient
