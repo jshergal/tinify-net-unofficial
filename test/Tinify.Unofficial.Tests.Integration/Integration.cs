@@ -115,7 +115,7 @@ namespace Tinify.Unofficial.Tests.Integration
             _awsBucket = Environment.GetEnvironmentVariable("AWS_BUCKET");
 
             var unoptimizedPath = Path.Combine(AppContext.BaseDirectory, "examples", "voormedia.png");
-            optimized = _client.ShrinkFromFile(unoptimizedPath).Result;
+            optimized = _client.ShrinkFromFileAsync(unoptimizedPath).Result;
         }
 
         [Test]
@@ -139,7 +139,7 @@ namespace Tinify.Unofficial.Tests.Integration
         [Test]
         public async Task Should_Compress_FromUrl()
         {
-            await using var source = await _client.ShrinkFromUrl(
+            await using var source = await _client.ShrinkFromUrlAsync(
                 "https://raw.githubusercontent.com/tinify/tinify-python/master/test/examples/voormedia.png"
             ).ConfigureAwait(false);
 

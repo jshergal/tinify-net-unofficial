@@ -80,9 +80,9 @@ namespace Tinify.Unofficial
 
         private async ValueTask<ImageResult> GetResult()
         {
-            if (_result is not null) return _result;
-
             if (_disposed) throw new ObjectDisposedException(nameof(OptimizedImage));
+            
+            if (_result is not null) return _result;
 
             _result = await _client.GetResult(this).ConfigureAwait(false);
             return _result;

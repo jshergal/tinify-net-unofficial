@@ -85,7 +85,7 @@ namespace Tinify.Unofficial.Tests
                 return res;
             });
 
-            _optimizedImage = _client.ShrinkFromBuffer(Array.Empty<byte>()).Result;
+            _optimizedImage = _client.ShrinkFromBufferAsync(Array.Empty<byte>()).Result;
         }
 
         [TearDown]

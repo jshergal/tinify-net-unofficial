@@ -177,14 +177,14 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Should_IssueRequest_ToEndpoint()
         {
-            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var _ = Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             Assert.AreEqual("https://api.tinify.com/shrink", Helper.LastRequest.RequestUri?.ToString());
         }
 
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var optimizedImage = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var optimizedImage = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 optimizedImage.Location?.ToString()
@@ -192,9 +192,10 @@ namespace Tinify.Unofficial.Tests
         }
 
         [Test]
-        public void Should_IssueRequest_WithUserAgent()
+        public async Task Should_IssueRequest_WithUserAgent()
         {
-            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
+            
             Assert.AreEqual(
                 Platform.UserAgent,
                 string.Join(" ", Helper.LastRequest.Headers.GetValues("User-Agent"))
@@ -204,7 +205,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public void Should_UpdateCompressionCount()
         {
-            using var _ = Client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var _ = Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             Assert.AreEqual(12, TinifyClient.CompressionCount);
         }
     }
@@ -235,7 +236,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var response = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 response.Location?.ToString()
@@ -265,7 +266,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -307,7 +308,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var response = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 response.Location?.ToString()
@@ -344,7 +345,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -386,7 +387,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var response = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 response.Location?.ToString()
@@ -422,7 +423,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ConnectionException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -466,7 +467,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var response = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 response.Location?.ToString()
@@ -507,7 +508,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ServerException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -551,7 +552,7 @@ namespace Tinify.Unofficial.Tests
         [Test]
         public async Task Should_ReturnResponse()
         {
-            await using var response = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+            await using var response = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             Assert.AreEqual(
                 "https://api.tinify.com/foo.png",
                 response.Location?.ToString()
@@ -592,7 +593,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ServerException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -631,7 +632,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<ClientException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -668,7 +669,7 @@ namespace Tinify.Unofficial.Tests
         {
             var error = Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await using var _ = await Client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await Client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
 
             Assert.AreEqual(
@@ -701,7 +702,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await using var _ = await _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png");
+                await using var _ = await _client.ShrinkFromFileAsync(AppContext.BaseDirectory + "/examples/dummy.png");
             });
         }
 
@@ -710,7 +711,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await using var _ = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes);
+                await using var _ = await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes);
             });
         }
 
@@ -719,7 +720,7 @@ namespace Tinify.Unofficial.Tests
         {
             Assert.ThrowsAsync<AccountException>(async () =>
             {
-                await using var _ = await _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg);
+                await using var _ = await _client.ShrinkFromUrlAsync(Helper.HttpsExampleComTestJpg);
             });
         }
     }
@@ -727,8 +728,13 @@ namespace Tinify.Unofficial.Tests
     [TestFixture]
     public class Client_Shrink_With_Valid_Api_Key
     {
-        private const string ExpectedContent = "compressed file";
+        private const string ExpectedOptimizedContent = "compressed file";
+        private const string ExpectedCompressedLocation = "https://api.tinify.com/some/location";
+        private static readonly string DummyFilePath = Path.Combine(AppContext.BaseDirectory, "examples", "dummy.png");
+        private readonly byte[] ExpectedFileContent = File.ReadAllBytes(DummyFilePath);
+        
         private TinifyClient _client;
+        private byte[] _lastRequestContent;
 
         [OneTimeSetUp]
         public void OneTimeSetUp()
@@ -736,39 +742,122 @@ namespace Tinify.Unofficial.Tests
             TinifyClient.ClearClients();
             Helper.ResetMockHandler();
             _client = new TinifyClient("valid", Helper.MockHandler);
+            
 
-            Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(_ =>
+            Helper.MockHandler.When("https://api.tinify.com/shrink").Respond(req =>
             {
+                _lastRequestContent = req.Content?.ReadAsByteArrayAsync().Result ?? Array.Empty<byte>();
+                
                 var res = new HttpResponseMessage(HttpStatusCode.Created);
-                res.Headers.Add("Location", "https://api.tinify.com/some/location");
+                res.Headers.Add("Location", ExpectedCompressedLocation);
                 return res;
             });
 
-            Helper.MockHandler.When("https://api.tinify.com/some/location").Respond(
-                HttpStatusCode.OK,
-                new StringContent(ExpectedContent)
-            );
+            Helper.MockHandler.When(ExpectedCompressedLocation).Respond(_ =>
+            {
+                var res = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(ExpectedOptimizedContent),
+                };
+                res.Headers.Add("Compression-Count", "1");
+
+                return res;
+            });
         }
 
+        [Test]
+        public async Task FromFile_Should_Send_FileContent()
+        {
+            await using var optimized = await _client.ShrinkFromFileAsync(DummyFilePath).ConfigureAwait(false);
+            Assert.AreEqual(ExpectedFileContent, _lastRequestContent);
+        }
+        
+        [Test]
+        public async Task FromFile_ReturnsOptimized_Image_WithCompressedLocation()
+        {
+            await using var optimized = await _client.ShrinkFromFileAsync(DummyFilePath).ConfigureAwait(false);
+
+            Assert.AreEqual(ExpectedCompressedLocation, optimized.Location?.AbsoluteUri);
+            
+            var result = Encoding.UTF8.GetString(await optimized.ToBufferAsync().ConfigureAwait(false));
+            Assert.AreEqual(ExpectedOptimizedContent, result);
+        }
+        
         [Test]
         public void FromFile_Should_Return_ImageLocation_Task()
         {
             Assert.IsInstanceOf<Task<OptimizedImage>>(
-                _client.ShrinkFromFile(AppContext.BaseDirectory + "/examples/dummy.png")
+                _client.ShrinkFromFileAsync(DummyFilePath)
+            );
+        }
+        
+        [Test]
+        public async Task FromStream_Should_Send_FileContent()
+        {
+            await using var optimized = await _client.ShrinkFromStreamAsync(File.OpenRead(DummyFilePath)).ConfigureAwait(false);
+            Assert.AreEqual(ExpectedFileContent, _lastRequestContent);
+        }
+        
+        [Test]
+        public async Task FromStream_ReturnsOptimized_Image_WithCompressedLocation()
+        {
+            await using var optimized = await _client.ShrinkFromStreamAsync(File.OpenRead(DummyFilePath)).ConfigureAwait(false);
+
+            Assert.AreEqual(ExpectedCompressedLocation, optimized.Location?.AbsoluteUri);
+            
+            var result = Encoding.UTF8.GetString(await optimized.ToBufferAsync().ConfigureAwait(false));
+            Assert.AreEqual(ExpectedOptimizedContent, result);
+        }
+        
+        [Test]
+        public void FromStream_Should_Return_ImageLocation_Task()
+        {
+            Assert.IsInstanceOf<Task<OptimizedImage>>(
+                _client.ShrinkFromStreamAsync(File.OpenRead(DummyFilePath))
             );
         }
 
         [Test]
+        public async Task FromBuffer_Should_Send_BufferContent()
+        {
+            await using var optimized = await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
+            Assert.AreEqual(Helper.MockPngImageBytes, _lastRequestContent);
+        }
+        
+        [Test]
+        public async Task FromBuffer_ReturnsOptimized_Image_WithCompressedLocation()
+        {
+            await using var optimized = await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
+
+            Assert.AreEqual(ExpectedCompressedLocation, optimized.Location?.AbsoluteUri);
+            
+            var result = Encoding.UTF8.GetString(await optimized.ToBufferAsync().ConfigureAwait(false));
+            Assert.AreEqual(ExpectedOptimizedContent, result);
+        }
+        
+        [Test]
         public void FromBuffer_Should_Return_ImageLocation_Task()
         {
-            Assert.IsInstanceOf<Task<OptimizedImage>>(_client.ShrinkFromBuffer(Helper.MockPngImageBytes));
+            Assert.IsInstanceOf<Task<OptimizedImage>>(_client.ShrinkFromBufferAsync(Helper.MockPngImageBytes));
         }
 
+        [Test]
+        public async Task FromUrl_ReturnsOptimized_Image_WithCompressedLocation()
+        {
+            await using var optimized =
+                await _client.ShrinkFromUrlAsync(Helper.HttpsExampleComTestJpg).ConfigureAwait(false);
+
+            Assert.AreEqual(ExpectedCompressedLocation, optimized.Location?.AbsoluteUri);
+            
+            var result = Encoding.UTF8.GetString(await optimized.ToBufferAsync().ConfigureAwait(false));
+            Assert.AreEqual(ExpectedOptimizedContent, result);
+        }
+        
         [Test]
         public void FromUrl_Should_Return_ImageLocation_Task()
         {
             Assert.IsInstanceOf<Task<OptimizedImage>>(
-                _client.ShrinkFromUrl(Helper.HttpsExampleComTestJpg)
+                _client.ShrinkFromUrlAsync(Helper.HttpsExampleComTestJpg)
             );
         }
 
@@ -783,7 +872,7 @@ namespace Tinify.Unofficial.Tests
 
             Assert.ThrowsAsync<ClientException>(async () =>
             {
-                await using var _ = await _client.ShrinkFromUrl("file://wrong");
+                await using var _ = await _client.ShrinkFromUrlAsync("file://wrong");
             });
         }
     }
@@ -828,7 +917,7 @@ namespace Tinify.Unofficial.Tests
             var imageOperations =
                 new TransformOperations(
                     preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
-            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
 
             Assert.AreEqual(
@@ -855,7 +944,7 @@ namespace Tinify.Unofficial.Tests
                 resize: new ResizeOperation(ResizeType.Fit, 100, 60),
                 preserve: new PreserveOperation(PreserveOptions.Copyright | PreserveOptions.Location));
 
-            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
             Assert.AreEqual(
                 Encoding.UTF8.GetBytes(expectedData),
@@ -883,7 +972,7 @@ namespace Tinify.Unofficial.Tests
 
             var imageOperations = new TransformOperations(new ResizeOperation(ResizeType.Scale, 400));
 
-            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
             Assert.AreEqual(
                 Encoding.UTF8.GetBytes(expectedData),
@@ -908,7 +997,7 @@ namespace Tinify.Unofficial.Tests
                     Region = "us-west-1",
                     Path = "example-bucket/my-images/optimized.jpg",
                 });
-            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
             using var result = _client.GetResult(optimizedImage, imageOperations).Result;
 
             using var document = JsonDocument.Parse(Helper.LastBody);
@@ -931,7 +1020,7 @@ namespace Tinify.Unofficial.Tests
                     Path = "example-bucket/my-images/optimized.jpg",
                 });
             await using var optimizedImage =
-                await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+                await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
             await using var result = await _client.GetResult(optimizedImage, imageOperations).ConfigureAwait(false);
             Assert.AreEqual(
                 new Uri("https://bucket.s3.amazonaws.com/example"),
@@ -945,7 +1034,7 @@ namespace Tinify.Unofficial.Tests
             const string expectedData = "compressed file";
             Helper.EnqueueShrinkAndResult(expectedData);
             await using var optimizedImage =
-                await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+                await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
             await using var result = await _client.GetResult(optimizedImage).ConfigureAwait(false);
 
             Assert.AreEqual(
@@ -959,7 +1048,7 @@ namespace Tinify.Unofficial.Tests
         {
             const string expectedData = "compressed file";
             Helper.EnqueueShrinkAndResult(expectedData);
-            using var optimizedImage = _client.ShrinkFromBuffer(Helper.MockPngImageBytes).Result;
+            using var optimizedImage = _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).Result;
 
             using var result = _client.GetResult(optimizedImage).Result;
             using var buffer = MemoryOwner<byte>.Allocate(result.DataLength);
@@ -976,7 +1065,7 @@ namespace Tinify.Unofficial.Tests
             const string expectedData = "compressed file";
             Helper.EnqueueShrinkAndResult(expectedData);
 
-            await using var optimizedImage = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var optimizedImage = await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
             await using var file = new TempFile();
             await optimizedImage.ToFileAsync(file.Path);
             Assert.AreEqual(
@@ -991,7 +1080,7 @@ namespace Tinify.Unofficial.Tests
             Helper.EnqueueShrinkAndResult("compressed file");
             var expected = Encoding.UTF8.GetBytes("compressed file");
 
-            await using var optimizedImage = await _client.ShrinkFromBuffer(Helper.MockPngImageBytes).ConfigureAwait(false);
+            await using var optimizedImage = await _client.ShrinkFromBufferAsync(Helper.MockPngImageBytes).ConfigureAwait(false);
             await using var result = await _client.GetResult(optimizedImage).ConfigureAwait(false);
             using var ms = new MemoryStream(expected.Length * 2);
             await result.ToStreamAsync(ms).ConfigureAwait(false);

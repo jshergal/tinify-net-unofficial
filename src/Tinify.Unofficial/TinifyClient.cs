@@ -72,7 +72,7 @@ namespace Tinify.Unofficial
         private static HttpClient GetClient(string key, HttpMessageHandler handler)
         {
             var tempHandler = handler ?? SocketHandler;
-            var clientKey = key + tempHandler;
+            var clientKey = key + tempHandler.GetHashCode();
             lock (Lock)
             {
                 if (HttpClients.TryGetValue(clientKey, out var client)) return client;
@@ -93,20 +93,26 @@ namespace Tinify.Unofficial
             }
         }
 
-        public async Task<OptimizedImage> ShrinkFromFile(string path)
+        public async Task<OptimizedImage> ShrinkFromFileAsync(string path)
         {
-            var buffer = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
-            return await ShrinkFromBuffer(buffer).ConfigureAwait(false);
+            return await ShrinkFromStreamAsync(File.OpenRead(path)).ConfigureAwait(false);
         }
 
-        public async Task<OptimizedImage> ShrinkFromBuffer(byte[] buffer)
+        public async Task<OptimizedImage> ShrinkFromStreamAsync(Stream stream)
+        {
+            using var response = await Request(HttpMethod.Post, ShrinkUri, new StreamContent(stream))
+                .ConfigureAwait(false);
+            return await OptimizedImage.CreateAsync(response, this);
+        }
+
+        public async Task<OptimizedImage> ShrinkFromBufferAsync(byte[] buffer)
         {
             using var response = await Request(HttpMethod.Post, ShrinkUri, new ReadOnlyMemoryContent(buffer))
                 .ConfigureAwait(false);
             return await OptimizedImage.CreateAsync(response, this);
         }
 
-        public async Task<OptimizedImage> ShrinkFromUrl(string url)
+        public async Task<OptimizedImage> ShrinkFromUrlAsync(string url)
         {
             var body = new StringContent($"{{\"source\":{{\"url\":\"{url}\"}}}}",
                 Encoding.UTF8, MediaTypeNames.Application.Json);
@@ -183,7 +189,7 @@ namespace Tinify.Unofficial
                 catch (Exception err)
                 {
                     data = new ErrorData(
-                        "Error while parsing response: " + err.Message,
+                        $"Error while parsing response: {err.Message}",
                         "ParseError"
                     );
                 }
