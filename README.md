@@ -17,6 +17,7 @@ Install the API client:
 Install-Package Tinify.Unofficial
 ```
 
+### :boom: Minor Breaking Change between v1.0.2 and v1.0.3
 ## Usage
 
 ### Initialize the TinifyClient
