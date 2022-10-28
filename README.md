@@ -32,6 +32,7 @@ Simply construct a new instance of `TinifyClient` with your [API key](https://ti
 #### Example
 
 ```csharp
+using Tinify.Unofficial;
 var client = new TinifyClient("YOUR_API_KEY");
 ```
 
@@ -84,8 +85,6 @@ var client = new TinifyClient("YOUR_API_KEY",
 #### Example
 
 ```csharp
-using Tinify.Unofficial;
-
 var client = new TinifyClient("YOUR_API_KEY");
 await using var optimizedImage = await client.ShrinkFromFileAsync("unoptimized.png");
 await optimizedImage.ToFileAsync("optimized.png");
