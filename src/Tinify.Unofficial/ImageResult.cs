@@ -31,7 +31,7 @@ namespace Tinify.Unofficial
 
         public void Dispose() => DisposeCore();
 
-        internal static async Task<ImageResult> Create(HttpResponseMessage response, bool disposeResponse = false)
+        internal static async Task<ImageResult> Create(HttpResponseMessage response, bool disposeResponse)
         {
             try
             {

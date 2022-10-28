@@ -93,23 +93,21 @@ namespace Tinify.Unofficial
             }
         }
 
-        public async Task<OptimizedImage> ShrinkFromFileAsync(string path)
-        {
-            return await ShrinkFromStreamAsync(File.OpenRead(path)).ConfigureAwait(false);
-        }
+        public async Task<OptimizedImage> ShrinkFromFileAsync(string path) =>
+            await ShrinkFromStreamAsync(File.OpenRead(path)).ConfigureAwait(false);
 
         public async Task<OptimizedImage> ShrinkFromStreamAsync(Stream stream)
         {
             using var response = await Request(HttpMethod.Post, ShrinkUri, new StreamContent(stream))
                 .ConfigureAwait(false);
-            return await OptimizedImage.CreateAsync(response, this);
+            return await OptimizedImage.CreateAsync(response, this, true);
         }
 
         public async Task<OptimizedImage> ShrinkFromBufferAsync(byte[] buffer)
         {
             using var response = await Request(HttpMethod.Post, ShrinkUri, new ReadOnlyMemoryContent(buffer))
                 .ConfigureAwait(false);
-            return await OptimizedImage.CreateAsync(response, this);
+            return await OptimizedImage.CreateAsync(response, this, true);
         }
 
         public async Task<OptimizedImage> ShrinkFromUrlAsync(string url)
@@ -123,7 +121,7 @@ namespace Tinify.Unofficial
 
         internal async Task<ImageResult> GetResult(OptimizedImage optimizedImage, TransformOperations operations = null)
         {
-            using var response = operations is null
+            var response = operations is null
                 ? await Request(HttpMethod.Get, optimizedImage.Location).ConfigureAwait(false)
                 : await Request(HttpMethod.Post, optimizedImage.Location, operations)
                     .ConfigureAwait(false);
@@ -140,23 +138,31 @@ namespace Tinify.Unofficial
 
         private async Task<HttpResponseMessage> Request(HttpMethod method, Uri url, HttpContent body = null)
         {
+            HttpResponseMessage response = null;
             for (var retries = RetryCount; retries >= 0; retries--)
             {
-                if (retries < RetryCount) await Task.Delay(RetryDelay);
+                if (retries < RetryCount)
+                {
+                    // If we are retrying, then we need to dispose of the old response
+                    response?.Dispose();
+                    await Task.Delay(RetryDelay);
+                }
 
-                var request = new HttpRequestMessage(method, url)
+                using var request = new HttpRequestMessage(method, url)
                 {
                     Content = body
                 };
 
-                HttpResponseMessage response;
                 try
                 {
-                    response = await _client.SendAsync(request).ConfigureAwait(false);
+                    response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                        .ConfigureAwait(false);
                 }
                 catch (OperationCanceledException err)
                 {
                     if (retries > 0) continue;
+
+                    response?.Dispose();
                     throw new ConnectionException("Timeout while connecting", err);
                 }
                 catch (Exception err)
@@ -165,6 +171,7 @@ namespace Tinify.Unofficial
 
                     if (err.InnerException != null) err = err.InnerException;
 
+                    response?.Dispose();
                     throw new ConnectionException("Error while connecting: " + err.Message, err);
                 }
 
@@ -194,6 +201,7 @@ namespace Tinify.Unofficial
                     );
                 }
 
+                response.Dispose();
                 throw TinifyException.Create(data.Message, data.Error, response.StatusCode);
             }
 
@@ -202,9 +210,10 @@ namespace Tinify.Unofficial
 
         public async Task<bool> Validate()
         {
+            HttpResponseMessage response = null;
             try
             {
-                await Request(HttpMethod.Post, ShrinkUri).ConfigureAwait(false);
+                response = await Request(HttpMethod.Post, ShrinkUri).ConfigureAwait(false);
             }
             catch (AccountException err) when (err.Status == HttpStatusCode.TooManyRequests)
             {
@@ -213,6 +222,10 @@ namespace Tinify.Unofficial
             catch (ClientException)
             {
                 return true;
+            }
+            finally
+            {
+                response?.Dispose();
             }
 
             return false;
