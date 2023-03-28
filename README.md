@@ -1,6 +1,6 @@
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jshergal/tinify-net-unofficial/CI_CD)
-![GitHub last commit](https://img.shields.io/github/last-commit/jshergal/tinify-net-unofficial)
-![Nuget](https://img.shields.io/nuget/v/tinify.unofficial)
+![GitHub Workflow Status][def_workflow_status]
+![GitHub last commit][def_last_commit]
+![Nuget][def_nuget]
 
 ## Unofficial fork of the Tinify API Client for .NET
 
@@ -201,3 +201,8 @@ TINIFY_KEY=<YOUR_API_KEY>
 ## License
 
 This software is licensed under the MIT License. [View the license](LICENSE).
+
+
+[def_workflow_status]: https://img.shields.io/github/actions/workflow/status/jshergal/tinify-net-unofficial/ci-cd.yml?branch=main
+[def_last_commit]: https://img.shields.io/github/last-commit/jshergal/tinify-net-unofficial
+[def_nuget]: https://img.shields.io/nuget/v/tinify.unofficial
