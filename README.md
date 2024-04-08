@@ -1,6 +1,6 @@
-![GitHub Workflow Status][def_workflow_status]
-![GitHub last commit][def_last_commit]
-![Nuget][def_nuget]
+## This project is no longer being maintained
+Please check out the [TinyPNG](https://github.com/ctolkien/TinyPNG) project which is still active. Be sure to give the project a star if you find it useful.
+
 
 ## Unofficial fork of the Tinify API Client for .NET
 
